@@ -8,7 +8,153 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-This is a test
+
+## Sampling - Basic Monte Carlo
+
+Sample from ex-Gaussian distribution
+
 ```{r}
+#exgauss=rnorm(2000,0.4,0.1)+rexp(2000,0.5)
+#exgauss[sum(exgauss>3)]/length(exgauss)
+
+exgaussdens <- function(x){
+  y <- rep(0,x)
+  z <- rep(0,x)
+  for (i in 1:x) {
+    y[i] <- rexGAUS(1,0.4,0.1,0.5)#rnorm(1,0.4,0.1)+rexp(1,0.5)
+    if(y[i]>3) {z[i]=dexGAUS(y[i],0.4,0.1,0.5)
+    }
+  }
+  mean(z[y>3])#sum(z[y>3])/x
+}
+#plot(density(replicate(10,exgaussdens(2000))))
+exgaussdens(2000)
+
+# Very variable
+```
+
+## Importance sampling
+
+```{r}
+
+# Importance Sampling - Truncated Normal
+IS <- function(n){
+  y <- rep(0,n)
+  w <- rep(0,n)
+  for(i in 1:n){
+    yi <- rtruncnorm(1,3,mean = 3,sd=0.1)
+    wi <- max( c(dexGAUS(yi,0.4,0.1,0.5)/dtruncnorm(yi,3,mean = 3,sd=0.1), 0), na.rm = T )
+    y[i] <- yi
+    w[i] <- wi
+  }
+  #y*w
+  return(list(y = y, w = w))
+}
+#plot(density(replicate(10,IS(2000))))
+exgaussis <- IS(2000)
+mean(exgaussis$w[exgaussis$y>3])
+
+# Importance Sampling - Truncated Exponential
+IS <- function(n){
+  y <- rep(0,n)
+  w <- rep(0,n)
+  for(i in 1:n){
+    yi <- rexp(1,0.5)+3
+    wi <- dexGAUS(yi,0.4,0.1,0.5)/dexp(yi-3,0.5)
+    y[i] <- yi
+    w[i] <- wi
+  }
+  #y*w
+  return(list(y = y, w = w))
+}
+#return(list(y = y, w = w))
+#plot(density(replicate(10,IS(2000))))
+exgaussis <- IS(2000)
+mean(exgaussis$w)
+#mean((exgaussis$y*exgaussis$w)[exgaussis$y>3])
+
+IS <- function(n){
+  y <- rep(0,length(n))
+  w <- rep(0,length(n))
+  for(i in 1:n){
+    y[i] <- rexp(1,0.5)+3
+    if(y[i]>3){w[i] <- dexGAUS(y[i],0.4,0.1,0.5)/dexp(y[i]-3,0.5)}
+    else{w[i]<-0}
+  }
+  w <- w/sum(w)
+  return(list(y = y, w = w))
+}
+# This ain't working
+exgaussis <- IS(2000)
+mean(exgaussis$w)
+
+
+w <- function(x) dexGAUS(x,0.4,0.1,0.5)/dexp(x-3,0.5)
+#f <- function(x) if(x>3){1}else{0}
+# For loop would be needed
+X <- rexp(2000,0.5)+3
+Y <- w(X)#*f(W)
+```
+
+## Sequential Importance Sampling
+
+```{r}
+SIS <- function(n,times){
+  mu <- rep(0,n)
+  sig <- rep(0,n)
+  obs <- rep(0,times)
+  w <- rep(1/n,n)
+  wts <- matrix(0,ncol=times,nrow=n)
+  for(i in 1:n){
+    mu[i] <- rnorm(1,0,10)
+    sig[i] <- runif(1,0,50)
+  }
+  for(i in 1:times){
+    obs[i] <- rnorm(1,mean=5,sd=5) 
+  }
+  for(i in 1:times) {
+    w <- w*dnorm(obs[i],mean=mu,sd=sig)
+    w <- w/sum(w)
+    wts[,i] <- w
+  }
+  return(list(postmu = colSums(mu*wts), postsig = colSums(sig*wts)))
+}
+seqposts <- SIS(200,100)
+plot(seqposts$postmu)
+plot(seqposts$postsig)
+```
+
+## Resampling
+
+```{r}
+
+ReSIS <- function(n,times){
+  mu <- rep(0,n)
+  sig <- rep(0,n)
+  obs <- rep(0,times)
+  w <- rep(1/n,n)
+  wts <- matrix(0,ncol=times,nrow=n)
+  resamplemu <- matrix(0,ncol=n,nrow=times+1)
+  resamplesig <- matrix(0,ncol=n,nrow=times+1)
+  for(i in 1:n){
+    mu[i] <- rnorm(1,0,10)
+    sig[i] <- runif(1,0,50)
+  }
+  resamplemu[1,] <- mu
+  resamplesig[1,] <- sig
+  for(i in 1:times) {
+    obs[i] <- rnorm(1,mean=5,sd=5)
+    wt <- w*dnorm(obs[i],mean=resamplemu[i,],sd=resamplesig[i,])
+    wt <- wt/sum(wt)
+    #wts[,i] <- wt
+    resamplemu[i+1,] <- sample(resamplemu[i,], n, replace = T, prob = wt)
+    resamplesig[i+1,] <- sample(resamplesig[i,], n, replace = T, prob = wt)
+  }
+  return(list(postmu = rowMeans(resamplemu), postsig = rowMeans(resamplesig)))
+  #return(list(postmu = colSums(mu*wts), postsig = colSums(sig*wts)))
+}
+seqposts <- ReSIS(20000,100)
+plot(seqposts$postmu)
+plot(seqposts$postsig)
 
 ```
