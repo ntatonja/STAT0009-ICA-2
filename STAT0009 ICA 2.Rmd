@@ -54,12 +54,11 @@ The choice of the instrumental distribution depends on many things. Ideally, $q$
 It should be noted that importance sampling does not directly generate samples from the target distribution $p$, but it is possible to generate samples which are approximately distributed according to it by resampling with replacement from the
 set of sampled values, where we resample a sample value $y^{(i)}$ with a probability proportional to the importance weight $w(y^{(i)})$. This is called the importance sampling resampling algorithm, which will be further explored later on.
 
-The below codechunk shows 
-## Importance sampling
+Still using the same example, we now try using importance sampling to estimate the exceedance probability $p(Y \geq 3)$, where $Y$ follows an ex-Gaussian distribution with the same parameters as before. We try two different instrumental distributions, first, a normal distribution truncated below at 3, with parameters $\mu = 3$ and $\sigma = 0.1$, then a shifted exponential distribution, shifted to the right by 3, with a rate $\tau = 0.5$. We use a sample size of N = 2000 in both cases. The below code will execute these two importance sampling algorithms. 
 
 ```{r}
-library(truncnorm)
 # Importance Sampling - Truncated Normal
+library(truncnorm)
 IS <- function(n){
   y <- rep(0,n)
   w <- rep(0,n)
@@ -76,7 +75,7 @@ IS <- function(n){
 exgaussis <- IS(2000)
 mean(exgaussis$w[exgaussis$y>3])
 
-# Importance Sampling - Truncated Exponential
+# Importance Sampling - Shifted Exponential
 IS <- function(n){
   y <- rep(0,n)
   w <- rep(0,n)
@@ -117,6 +116,9 @@ w <- function(x) dexGAUS(x,0.4,0.1,0.5)/dexp(x-3,0.5)
 X <- rexp(2000,0.5)+3
 Y <- w(X)#*f(W)
 ```
+By looking at the results, it is clear that using the shifted exponential distribution resulted in a much better estimate, which is very close to the true value, whereas the truncated normal one actually yielded a worse result, than basic Monte Carlo. Therefore, it is clear that the choice of the instrumental distribution strongly affects the outcome.
+
+## Efficiency
 
 ## Sequential Importance Sampling
 
