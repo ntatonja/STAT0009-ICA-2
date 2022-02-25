@@ -8,6 +8,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Basic Monte Carlo
+
 One of the most common problems in many areas of Statistics is the problem of intractable integrals and the "curse of dimensionality", i.e. that problems become exponentially harder and more computationally intensive when extended to two or more dimensions. The Monte Carlo method helps tackling these issues, and is based on the following principle: if an integral can be written as an expectation with respect to some probability distribution, then we can approximate it by drawing samples from the distribution and computing the sample mean (STAT0017 lecture notes). This method works because of two well known theorems from probability theory, the Law of Large Numbers and the Central Limit Theorem. 
 
 To calculate an expected value $E_p[f(Y)]$, where $Y$ is a random variable with known distribution $p(y)$, and $f(Y)$ is a given function of $Y$, using the Basic Monte Carlo integration, the following algorithm is used. First, for $i = 1,\dots, N$, sample $y^{(i)} ∼ p(y)$, where $y^{(i)}$ denotes the $i^{th}$ sampled value. Then, compute the sample mean to obtain the Monte Carlo estimate $E^{MC}$ of the expected value:$E^{MC}= \frac{1}{N} \sum^{N}_{i=1}f(y^{(i)}).$
@@ -45,7 +47,9 @@ exgaussdens(2000)
 
 # Very variable
 ```
-It is clear that the Basic Monte Carlo method does not yield the best estimate in this situation as the exceedance probability we are calculating is very small, hence a larger sample size would be needed to increase precision. Generally speaking, Basic Monte Carlo often fails, as in most cases the distribution we want to sample from, $p$, is unknown, or sampling from it is not always possible or inefficient. An extension of the Basic Monte Carlo method, importance sampling (IS), could help in this situation. Importance sampling allows us to sample from an "instrumental distribution", $q$, instead of $p$, and then the sampled values will be weighted to correct for the fact that they were sampled from $q$, and not the target distribution $p$. This algorithm relies on the algebraic trick of multiplying and dividing by the same quantity, which leads to the "importance sampling fundamental identity" (Robert & Casella, 2004): $E_p[f(Y)] = \int \frac{p(y)}{q(y)}q(y)f(y) dy = E_q[w(Y)f(Y)]$. $\frac{p(y)}{q(y)}$ is the importance weight. 
+## Importance sampling
+
+It is clear that the Basic Monte Carlo method does not yield the best estimate in this situation as the exceedance probability we are calculating is very small, hence a larger sample size would be needed to increase precision. Generally speaking, Basic Monte Carlo often fails, as in most cases the distribution we want to sample from, $p$, is unknown, or sampling from it is not always possible or inefficient. An extension of the Basic Monte Carlo method, importance sampling (IS), could help in this situation. Importance sampling allows us to sample from an "instrumental distribution", $q$, instead of $p$, and then the sampled values will be weighted to correct for the fact that they were sampled from $q$, and not the target distribution $p$. This algorithm relies on the algebraic trick of multiplying and dividing by the same quantity, which leads to the "importance sampling fundamental identity" (Robert & Casella, 2004): $E_p[f(Y)] = \int \frac{p(y)}{q(y)}q(y)f(y) dy = E_q[w(Y)f(Y)]$, where $\frac{p(y)}{q(y)}$ is the importance weight. 
 
 Then, the algorithm for importance sampling for an expected value is as follows. First, $i = 1,\dots, N$, sample $y^{(i)} ∼ q(y)$. Then, for $i = 1,\dots, N$, compute the importance weight $w(i) =\frac{p(y^{(i)})}{q(y^{(i)})}$. Lastly, compute a weighted average to obtain the importance sampling estimate:$E^{IS}= \frac{1}{N} \sum^{N}_{i=1}w^{(i)}f(y^{(i)}).$
 
@@ -116,9 +120,11 @@ w <- function(x) dexGAUS(x,0.4,0.1,0.5)/dexp(x-3,0.5)
 X <- rexp(2000,0.5)+3
 Y <- w(X)#*f(W)
 ```
-By looking at the results, it is clear that using the shifted exponential distribution resulted in a much better estimate, which is very close to the true value, whereas the truncated normal one actually yielded a worse result, than basic Monte Carlo. Therefore, it is clear that the choice of the instrumental distribution strongly affects the outcome.
-
 ## Efficiency
+
+By looking at the results, it is clear that using the shifted exponential distribution resulted in a much better estimate, which is very close to the true value, whereas the truncated normal one actually yielded a worse result, than basic Monte Carlo. Therefore, it is clear that the choice of the importance distribution strongly affects the outcome. The optimal importance distribution $q*$ would minimise the variance of the estimator, so that $q*(y) =\frac{|f(y)|p(y)}{\int|f(y)|p(y)} dy$. However, the integral in the denominator is often unknown, so this is rarely used in real life. A more practical way to improve the efficiency of the estimators is to normalise the importance weights, so that $W^{(i)} = \frac{w^{(i)}}{\sum_{j=1}^N w^{(j)}}$, which results in the "self-normalized" IS estimator, $E^{ISn}=\sum^N_{i=1}W^{(i)}f(y^{(i)})$. This estimator is biased, however, it diminishes as the sample size increases and is usually offset by the gain in efficiency.
+
+
 
 ## Sequential Importance Sampling
 
