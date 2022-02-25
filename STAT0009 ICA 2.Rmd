@@ -58,7 +58,7 @@ The below codechunk shows
 ## Importance sampling
 
 ```{r}
-
+library(truncnorm)
 # Importance Sampling - Truncated Normal
 IS <- function(n){
   y <- rep(0,n)
