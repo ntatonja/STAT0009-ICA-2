@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Sampling - Basic Monte Carlo
-
+ADAM
 Sample from ex-Gaussian distribution
 
 ```{r}
