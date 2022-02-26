@@ -129,12 +129,14 @@ By looking at the results, it is clear that using the shifted exponential distri
 
 In real life it is often the case that observations come in sequentially, one after the other. This means that we need to infer any unknown parameters sequentially as well, after each new observation comes in. In a Bayesian context this means that we would need to compute a sequence of posterior distributions. To do this via importance sampling, we would need to define the importance weights as such: $w^{(i)}_t =\frac {p(\theta^{(i)}|y_{1:t})} {q_t(\theta^{(i)})}$, where $q_t(\theta)$ is the importance distribution that generates the importance sample. This method would require high computational power and time, as it would require the generation of a new importance sample at each time point, and this importance sample would get larger and larger over time.
 
-Sequential Importance Sampling (SIS) is an algorithm that could solve this problem as it has an approximately fixed computational cost at each time point. SIS uses information from previous observations and samples, thus it can provide more efficient importance distributions than just using basic importance sampling. Sequential Importance Sampling computes the importance weights incrementally by multiplying the importance weight at the previous time $t-1$ by an incremental weight update $a^{(i)}_t$. The importance weights are defined as follows:$$w^{(i)}_t =\frac {p(\theta^{(i)}|y_{1:t})q_{t-1}(\theta^{(i)})} {p(\theta^{(i)}|y_{1:t-1})q_t(\theta^{(i)})} \frac{p(\theta^{(i)}|y_{1:t-1})}{q_{t-1}(\theta^{(i)})}$$, 
+Sequential Importance Sampling (SIS) is an algorithm that could solve this problem as it has an approximately fixed computational cost at each time point. SIS uses information from previous observations and samples, thus it can provide more efficient importance distributions than just using basic importance sampling. Sequential Importance Sampling computes the importance weights incrementally by multiplying the importance weight at the previous time $t-1$ by an incremental weight update $a^{(i)}_t$. The importance weights are defined as follows:$$w^{(i)}_t =\frac {p(\theta^{(i)}|y_{1:t})q_{t-1}(\theta^{(i)})} {p(\theta^{(i)}|y_{1:t-1})q_t(\theta^{(i)})} \frac{p(\theta^{(i)}|y_{1:t-1})}{q_{t-1}(\theta^{(i)})},$$
 where the incremental weight update is defined as $$a^{(i)}_t= \frac {p(\theta^{(i)}|y_{1:t})}{p(\theta^{(i)}|y_{1:t-1})}\times \frac{q_{t-1}(\theta^{(i)})}{q_t(\theta^{(i)})}.$$
 
 While this still requires lengthy computations, it can be simplified in certain cases. Assuming that observations are conditionally independent and that the importance distribution is time invariant (i.e. $q_t(\theta) = q_{t-1}(\theta) = q(\theta) $), and using self-normalised importance weights, we can simplify the incremental weight update as $a^{(i)}_t=p(y_t|\theta^{(i)}).$
 
 Then, the algorithm for Sequential Importance Sampling with time invariant parameters is as follows. First, for $i = 1, \dots, N$, sample $\theta^{(i)} ∼ q(\theta )$, then compute the normalised weights $W^{(i)}_0 \propto \frac{p(\theta)}{q(\theta )}$ with $\sum^N_{j=1} W^{(i)}_0 = 1.$ Then, for $t = 1, \dots, t$, reweight the normalised weights for $i = 1, \dots, N$, by computing $W^{(i)}_t \propto p(y_t|\theta^{(i)})W^{(i)}_{t−1}$,with $\sum^N_{i=1} W^{(i)}_t = 1.$ Finally, for $t = 1, \dots, t$ compute the (self-normalised) SIS estimate $E^{SISn}_{t} =\sum ^N_{i=1}W^{(i)}_t f(\theta^{(i)})$.
+
+We will demonstrate how this algorithm works in the following example, whereby we want to sequentially infer the posterior mean and variance of a Gaussian random variable. We assume that the observations are independent and that they come from a Normal distribution with an unknown mean $\mu$ and variance $\sigma^2$. Hence, the unknown parameter $\theta$ is a vector $\theta=(\mu,\sigma)$. Our prior distributions for $\mu$ and $\sigma^2$ - which we will also use as the importance distributions - are a Gaussian distribution with mean 0 and standard deviation 10, and a uniform distribution between 0 and 50, for $\mu$ and $\sigma$ respectively. Then, we apply the algorithm to 100 observations from a Normal(5,5) distribution, using a sample of size N = 200. The following code shows a simulation of this example.
 
 ```{r}
 SIS <- function(n,times){
@@ -158,9 +160,11 @@ SIS <- function(n,times){
   return(list(postmu = colSums(mu*wts), postsig = colSums(sig*wts)))
 }
 seqposts <- SIS(200,100)
-plot(seqposts$postmu)
-plot(seqposts$postsig)
+plot(seqposts$postmu, main=expression(mu),xlab="Time point (t)",ylab="Value")
+plot(seqposts$postsig, main=expression(sigma),xlab="Time point (t)",ylab="Value")
 ```
+
+By looking at the plots above, it is clear that as t increases, the estimated posterior mean of $\sigma$ gets fairly close to the true value, 5, however, the estimated posterior mean of $\mu$ is slightly further away from it. This is due to a problem called weight degeneracy, where the weight of almost all particles becomes negligible as t increases. This results in the posterior mean being essentially estimated by a single sample value, which is not necessarily the one closest to the true value. The reason behind weight degeneracy is that the importance distribution becomes less and less efficient over time. 
 
 ## Resampling
 
