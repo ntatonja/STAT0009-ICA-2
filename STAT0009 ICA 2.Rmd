@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 ## Basic Monte Carlo
+Hello
 
 One of the most common problems in many areas of Statistics is the problem of intractable integrals and the "curse of dimensionality", i.e. that problems become exponentially harder and more computationally intensive when extended to two or more dimensions. The Monte Carlo method helps tackling these issues, and is based on the following principle: if an integral can be written as an expectation with respect to some probability distribution, then we can approximate it by drawing samples from the distribution and computing the sample mean (STAT0017 lecture notes). This method works because of two well known theorems from probability theory, the Law of Large Numbers and the Central Limit Theorem. 
 
