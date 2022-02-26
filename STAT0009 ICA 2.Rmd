@@ -9,12 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 ## Basic Monte Carlo
-<<<<<<< HEAD
-Hello 
-hello
-=======
-ADAM
->>>>>>> 8cf9ca4a49047c8a15ebe9a9d43a62be01576fa7
+
 One of the most common problems in many areas of Statistics is the problem of intractable integrals and the "curse of dimensionality", i.e. that problems become exponentially harder and more computationally intensive when extended to two or more dimensions. The Monte Carlo method helps tackling these issues, and is based on the following principle: if an integral can be written as an expectation with respect to some probability distribution, then we can approximate it by drawing samples from the distribution and computing the sample mean (STAT0017 lecture notes). This method works because of two well known theorems from probability theory, the Law of Large Numbers and the Central Limit Theorem. 
 
 To calculate an expected value $E_p[f(Y)]$, where $Y$ is a random variable with known distribution $p(y)$, and $f(Y)$ is a given function of $Y$, using the Basic Monte Carlo integration, the following algorithm is used. First, for $i = 1,\dots, N$, sample $y^{(i)} ∼ p(y)$, where $y^{(i)}$ denotes the $i^{th}$ sampled value. Then, compute the sample mean to obtain the Monte Carlo estimate $E^{MC}$ of the expected value:$E^{MC}= \frac{1}{N} \sum^{N}_{i=1}f(y^{(i)}).$
