@@ -314,6 +314,6 @@ for(t in 1:n) {
 }
 plot(1:n, y, col = "blue", pch = 20, xlab = "Time Points", ylab = "", main = "Gaussian Latent Process")
 points(theta, col="red", pch = 20)
-lines(rowSums(P*W)[-1], col = "purple")
+lines(0:n, rowSums(P*W), col = "purple")
 legend("bottomleft", c("True State", "Observed State", "Particle Filter Estimate"), col = c("red", "blue", "purple"), lty = c(20,20,1))
 ```
