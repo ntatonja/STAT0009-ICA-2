@@ -26,26 +26,6 @@ basic <- rexGAUS(2000,0.4,0.1,0.5)
 mean(basic>3) #estimate
 true<- 1-pexGAUS(3,0.4,0.1,0.5)
 1-mean(basic>3)/true #estimated value is around 16% lower than true value
-
-#------------------------------------------------------------------------------#
-#Alex's code 
-#exgauss=rnorm(2000,0.4,0.1)+rexp(2000,0.5)
-#exgauss[sum(exgauss>3)]/length(exgauss)
-
-exgaussdens <- function(x){
-  y <- rep(0,x)
-  z <- rep(0,x)
-  for (i in 1:x) {
-    y[i] <- rexGAUS(1,0.4,0.1,0.5)#rnorm(1,0.4,0.1)+rexp(1,0.5)
-    if(y[i]>3) {z[i]=dexGAUS(y[i],0.4,0.1,0.5)
-    }
-  }
-  mean(z[y>3])#sum(z[y>3])/x
-}
-#plot(density(replicate(10,exgaussdens(2000))))
-exgaussdens(2000)
-
-# Very variable
 ```
 ## Importance sampling
 
@@ -96,29 +76,6 @@ IS <- function(n){
 #plot(density(replicate(10,IS(2000))))
 exgaussis <- IS(2000)
 mean(exgaussis$w)
-#mean((exgaussis$y*exgaussis$w)[exgaussis$y>3])
-
-IS <- function(n){
-  y <- rep(0,length(n))
-  w <- rep(0,length(n))
-  for(i in 1:n){
-    y[i] <- rexp(1,0.5)+3
-    if(y[i]>3){w[i] <- dexGAUS(y[i],0.4,0.1,0.5)/dexp(y[i]-3,0.5)}
-    else{w[i]<-0}
-  }
-  w <- w/sum(w)
-  return(list(y = y, w = w))
-}
-# This ain't working
-exgaussis <- IS(2000)
-mean(exgaussis$w)
-
-
-w <- function(x) dexGAUS(x,0.4,0.1,0.5)/dexp(x-3,0.5)
-#f <- function(x) if(x>3){1}else{0}
-# For loop would be needed
-X <- rexp(2000,0.5)+3
-Y <- w(X)#*f(W)
 ```
 ## Efficiency
 
