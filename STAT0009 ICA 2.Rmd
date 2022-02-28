@@ -8,11 +8,11 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-## Introduction
-This is a report for the published study ‘A tutorial on particle filters’, by Maarten Speekenbrink. It was published in 2016 in Elsevier, and is
-accessible here: https://www.sciencedirect.com/science/article/pii/S002224961630030X. Throughout this report we focus on giving a basic understanding to the underlying theory and reproducing some of the illustrated examples through simulation. We only consider chapters 1 through to 4, as chapters beyond this focus more on specific applications and extensions to the methods shown.
 
-Write a report on a research paper, working through some of the theory and illustrating relevant examples via coding/simulation.
+## Introduction
+
+This is a report for the published study ‘A tutorial on particle filters’, by Maarten Speekenbrink. It was published in 2016 in the Journal of Mathematical Psychology, and is
+accessible here: https://www.sciencedirect.com/science/article/pii/S002224961630030X. Throughout this report we focus on giving a basic understanding to the underlying theory and reproducing some of the illustrated examples through simulation. We only consider chapters 1 through to 4, as chapters beyond this focus more on specific applications and extensions to the methods shown.
 
 ## Basic Monte Carlo
 
@@ -24,18 +24,21 @@ To calculate an expected value $E_p[f(Y)]$, where $Y$ is a random variable with 
 To present the most basic Monte Carlo algorithm, we took the following example. Y is a random variable following an ex-Gaussian distribution with parameters $\mu=0.4$, $\sigma=0.1$ and $\tau=0.5$. An ex-Gaussian distribution is often used to model response times, and it is defined as the sum of an exponential and a normally distributed variable, and has three parameters: $\mu$, $\sigma$ and $\tau$, which are the mean and standard deviation of the Gaussian variable, and the rate of the exponential variable, respectively. Y represents the time it takes for a person to complete a given task. We want to estimate the probability that it takes more than 3 seconds for a person to complete this task, $p(Y \geq 3)$. To calculate this, we sampled from an ex-Gaussian distribution and calculated the sample mean of the values that were larger than 3.  Sampling from an ex-Gaussian distribution is easy to do in $\texttt{R}$, using the $\texttt{rexGAUS}$ function in the $\texttt{gamlss.dist}$ package. The following code chunk will demonstrate this.  With a sample size of 2000, this gave an estimate $p(Y ≥ 3) ≈ 0.0045$. This is significantly (around 20%) lower compared to the true value, $p(Y ≥ 3) = 0.0056$.
 
 ```{r}
-#Tonja's code - not sure if correct
 # Sampling - Basic Monte Carlo
-set.seed(123)
 library(gamlss.dist)
-basic <- rexGAUS(2000,0.4,0.1,0.5)
-mean(basic>3) #estimate
-true <- 1-pexGAUS(3,0.4,0.1,0.5)
+
+set.seed(123)
+
+basic <- rexGAUS(2000, 0.4, 0.1, 0.5)
+
+mean(basic>3)
+
+true <- 1-pexGAUS(3, 0.4, 0.1, 0.5)
 1-mean(basic>3)/true #estimated value is around 16% lower than true value
 
 basics <- rep(0,100)
 for (i in 1:100) {
-  bis <- rexGAUS(2000,0.4,0.1,0.5)
+  bis <- rexGAUS(2000, 0.4, 0.1, 0.5)
   basics[i] <- mean(bis>3)
 }
 
