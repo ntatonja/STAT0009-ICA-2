@@ -24,8 +24,15 @@ set.seed(123)
 library(gamlss.dist)
 basic <- rexGAUS(2000,0.4,0.1,0.5)
 mean(basic>3) #estimate
-true<- 1-pexGAUS(3,0.4,0.1,0.5)
+true <- 1-pexGAUS(3,0.4,0.1,0.5)
 1-mean(basic>3)/true #estimated value is around 16% lower than true value
+
+basics <- rep(0,100)
+for (i in 1:100) {
+  bis <- rexGAUS(2000,0.4,0.1,0.5)
+  basics[i] <- mean(bis>3)
+}
+hist(basics)
 ```
 ## Importance sampling
 
@@ -43,7 +50,7 @@ Still using the same example, we now try using importance sampling to estimate t
 ```{r}
 # Importance Sampling - Truncated Normal
 library(truncnorm)
-IS <- function(n){
+ISnorm <- function(n){
   y <- rep(0,n)
   w <- rep(0,n)
   for(i in 1:n){
@@ -52,15 +59,23 @@ IS <- function(n){
     y[i] <- yi
     w[i] <- wi
   }
-  #y*w
   return(list(y = y, w = w))
 }
-#plot(density(replicate(10,IS(2000))))
-exgaussis <- IS(2000)
-mean(exgaussis$w[exgaussis$y>3])
+gaussis <- ISnorm(2000)
+mean(gaussis$w[gaussis$y>3])
+plot(density(gaussis$y*gaussis$w))
+plot(density(gaussis$y*gaussis$w), xlim = c(0,0.05))
+hist(gaussis$y*gaussis$w, breaks = 120, xlim = c(0,0.2))
+
+gaussiss <- rep(0, 100)
+for (i in 1:100) {
+  gis <- ISnorm(2000)
+  gaussiss[i] <- mean(gis$w[gis$y>3])
+}
+hist(gaussiss)
 
 # Importance Sampling - Shifted Exponential
-IS <- function(n){
+ISexp <- function(n){
   y <- rep(0,n)
   w <- rep(0,n)
   for(i in 1:n){
@@ -69,13 +84,19 @@ IS <- function(n){
     y[i] <- yi
     w[i] <- wi
   }
-  #y*w
   return(list(y = y, w = w))
 }
-#return(list(y = y, w = w))
-#plot(density(replicate(10,IS(2000))))
-exgaussis <- IS(2000)
-mean(exgaussis$w)
+expis <- ISexp(2000)
+mean(expis$w)
+hist(expis$y*expis$w, breaks = 5, xlim = c(0,0.2))
+
+expiss <- rep(0,100)
+for (i in 1:100) {
+  eis <- ISexp(2000)
+  expiss[i] <- mean(eis$w)
+}
+hist(expiss)
+
 ```
 ## Efficiency
 
@@ -173,4 +194,99 @@ abline(h=5,col="red",lty=2)
 plot(seqposts$postsig, main=expression(sigma),xlab="Time point (t)",ylab="Value")
 abline(h=5,col="red",lty=2)
 
+```
+
+## Particle Filter
+
+```{r}
+# Number of discrete time points that 
+n <- 50
+
+# Simulate the true latent process theta
+
+# Sample for in initial distribution
+intstate <- rnorm(1, 10, sqrt(2))
+
+# Sample the movement of the state
+transstates <- rnorm(n-1, 0, 1)
+
+# Initialise the true distribution
+theta <- rep(0, n)
+
+# The first value of theta is a sample from the initial distribution
+theta[1] <- intstate
+
+# The remaining values of theta are sums of the initial state and the individual transitions
+for (i in 2:n) {
+  theta[i] <- intstate + cumsum(transstates[1:(i-1)])[i-1]
+}
+
+# Add noise to get the observed values of the latent states
+y <- theta + rnorm(n, 0, sqrt(10))
+
+# number of particles to use at each distribution
+npar <- 500
+
+# The systematic resampling algorithm
+reSys <- function(w) {
+  # input: w is a vector of length N with (unnormalized) importance weights
+  # output: a vector of length N with indices of the replicated particles
+  # Find the length of the weights
+  N <- length(w)
+  # normalise the weights
+  w <- w/sum(w)
+  # Find the cumulative sum of the weights
+  cusum <- cumsum(w)
+  # Get the uniform sample
+  u <- runif(1, max=1/N)
+  # Generate U
+  FixedU <- seq(1/N, (N-1)/N, length=N-1)
+  U <- c(0, FixedU) + u
+  # Initialise the vector of indices
+  index <- rep(0,N)
+  j <- 1
+  # The for loop iterates over j. Each time, if the cumulative sum at j is less than U 
+  # at i, then keep increasing j until the cumulative sum is greater. If it is greater,
+  # then take that particle when resampling (by taking the index). If the cumulative
+  # sum is smaller for a new i, then it will skip over that observation as the weight
+  # is too small.
+  for(i in 1:N) {
+    while (U[i] > cusum[j]) {
+      j <- j + 1
+    }
+    index[i] <- j
+  }
+  return(index)
+}
+
+# Bootstrap filter
+
+# initialise matrix for the particles Each row represents a new time point
+# and each column is the number of samples used at each to estimate the true state at
+# each time point
+P <- matrix(NA, n+1, npar)
+
+# initialise matrix for the weights
+W <- matrix(NA, n+1, npar)
+
+# Sample particles from the prior distribution for the initial state.
+P[1,] <- rnorm(npar, 10, sqrt(2))
+# The particles from the initial distribution are all equally weighted.
+
+# Iterate over each distribution at each time point
+for(t in 1:n) {
+  # sample particles according to the transition distribution
+  P[t+1,] <- rnorm(npar, P[t,], 1)
+  # compute the weights for the new distribution according the the previous observed values.
+  # The particles at each previous time point have been given uniform weighting, thus
+  # there is no need to multiply by hat{W}_{t-1}^{(i)}
+  W[t+1,] <- dnorm(y[t], P[t+1,], sqrt(10))
+  # Normalise the weights, for each new distribution.
+  W[t+1,] <- W[t+1,]/sum(W[t+1,])
+  # Particles to be used from systematic resampling.
+  P[t+1,] <- P[t+1, reSys(W[t+1,])]
+}
+plot(1:n, y)
+points(theta, col="red")
+lines(rowSums(P*W)[-1])
 ```
