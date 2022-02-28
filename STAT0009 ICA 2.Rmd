@@ -18,7 +18,6 @@ To calculate an expected value $E_p[f(Y)]$, where $Y$ is a random variable with 
 To present the most basic Monte Carlo algorithm, we took the following example. Y is a random variable following an ex-Gaussian distribution with parameters $\mu=0.4$, $\sigma=0.1$ and $\tau=0.5$. An ex-Gaussian distribution is often used to model response times, and it is defined as the sum of an exponential and a normally distributed variable, and has three parameters: $\mu$, $\sigma$ and $\tau$, which are the mean and standard deviation of the Gaussian variable, and the rate of the exponential variable, respectively. Y represents the time it takes for a person to complete a given task. We want to estimate the probability that it takes more than 3 seconds for a person to complete this task, $p(Y \geq 3)$. To calculate this, we sampled from an ex-Gaussian distribution and calculated the sample mean of the values that were larger than 3.  Sampling from an ex-Gaussian distribution is easy to do in $\texttt{R}$, using the $\texttt{rexGAUS}$ function in the $\texttt{gamlss.dist}$ package. The following code chunk will demonstrate this.  With a sample size of 2000, this gave an estimate $p(Y ≥ 3) ≈ 0.0045$. This is significantly (around 20%) lower compared to the true value, $p(Y ≥ 3) = 0.0056$.
 
 ```{r}
-#Tonja's code - not sure if correct
 # Sampling - Basic Monte Carlo
 set.seed(123)
 library(gamlss.dist)
