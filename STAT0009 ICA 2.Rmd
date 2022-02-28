@@ -161,12 +161,21 @@ SIS <- function(n,times){
 }
 seqposts <- SIS(200,100)
 plot(seqposts$postmu, main=expression(mu),xlab="Time point (t)",ylab="Value")
+abline(h=5,col="red",lty=2)
 plot(seqposts$postsig, main=expression(sigma),xlab="Time point (t)",ylab="Value")
+abline(h=5,col="red",lty=2)
 ```
 
-By looking at the plots above, it is clear that as t increases, the estimated posterior mean of $\sigma$ gets fairly close to the true value, 5, however, the estimated posterior mean of $\mu$ is slightly further away from it. This is due to a problem called weight degeneracy, where the weight of almost all particles becomes negligible as t increases. This results in the posterior mean being essentially estimated by a single sample value, which is not necessarily the one closest to the true value. The reason behind weight degeneracy is that the importance distribution becomes less and less efficient over time. 
+By looking at the plots above, it is clear that as $t$ increases, the estimated posterior mean of $\sigma$ gets fairly close to the true value, 5, however, the estimated posterior mean of $\mu$ is slightly further away from it. This is due to a problem called weight degeneracy, where the weight of almost all particles becomes negligible as $t$ increases. This results in the posterior mean being essentially estimated by a single sample value, which is not necessarily the one closest to the true value. The reason behind weight degeneracy is that the importance distribution becomes less and less efficient over time. One measure for detecting weight degeneracy is the effective sample size, which is defined as $N^{eff}= \frac {1} {\sum^{N}_{i=1} (W^{(i)})^2}.$ It takes values between 1 and N, so lower effective sample size indicates stronger weight degeneracy.
 
 ## Resampling
+
+To overcome the issue of weight degeneracy, an extra step of resampling is introduced in the Sequential Monte Carlo algorithms. Resampling allows for particles to be sampled with replacement from the set of all particles, with a probability that
+depends on the importance weights. The key idea is to reproduce particles with large weights and discard those with small weights, as they have little to no effect on the estimates anyway. An additional benefit of resampling is that while the Sequential Importance sampling (SIS) samples were not distributed according to the target distribution $p$ but followed the instrumental distribution $q$, the resampled values are (approximately) distributed according to $p$. 
+
+There are various sampling schemes, such as multinomial resampling, residual resampling, stratified resampling, and systematic resampling. The simplest one is multinomial sampling, which draws $N$ samples from a multinomial distribution for all $i = 1, \dots, N$, with probabilities $p(i) =W^{(i)}$ . After resampling, the weights are set to $W^{(i)} = 1/N$. A drawback of multinomial sampling is that it increases the variance of the estimator. Alternative sampling schemes have been introduced with smaller variances. Residual resampling is a method that uses a mix of deterministic and random resampling approaches. To keep the estimator unbiased, the expected number of replications of each particle $i$ are set to be equal to $NW^{(i)}$ . As this is not an integer, residual resampling takes the integer part of each $NW^{(i)}$ term and replicates each sample value deterministically according to that number. The remaining particles are then generated through multinomial resampling from a distribution determined by the non-integer parts of each $NW^{(i)}$ term.
+
+
 
 ```{r}
 
