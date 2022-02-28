@@ -181,12 +181,10 @@ ReSIS <- function(n,times){
     obs[i] <- rnorm(1,mean=5,sd=5)
     wt <- w*dnorm(obs[i],mean=resamplemu[i,],sd=resamplesig[i,])
     wt <- wt/sum(wt)
-    #wts[,i] <- wt
     resamplemu[i+1,] <- sample(resamplemu[i,], n, replace = T, prob = wt)
     resamplesig[i+1,] <- sample(resamplesig[i,], n, replace = T, prob = wt)
   }
   return(list(postmu = rowMeans(resamplemu), postsig = rowMeans(resamplesig)))
-  #return(list(postmu = colSums(mu*wts), postsig = colSums(sig*wts)))
 }
 seqposts <- ReSIS(20000,100)
 plot(seqposts$postmu, main=expression(mu),xlab="Time point (t)",ylab="Value",ylim=c(range(seqposts$postmu)[1],5.2))
@@ -199,6 +197,8 @@ abline(h=5,col="red",lty=2)
 ## Particle Filter
 
 ```{r}
+# Bootstrap Filter
+
 # Number of discrete time points that 
 n <- 50
 
@@ -286,7 +286,8 @@ for(t in 1:n) {
   # Particles to be used from systematic resampling.
   P[t+1,] <- P[t+1, reSys(W[t+1,])]
 }
-plot(1:n, y)
-points(theta, col="red")
-lines(rowSums(P*W)[-1])
+plot(1:n, y, col = "blue", pch = 20, xlab = "Time Points", ylab = "", main = "Gaussian Latent Process")
+points(theta, col="red", pch = 20)
+lines(rowSums(P*W)[-1], col = "purple")
+legend("bottomleft", c("True State", "Observed State", "Particle Filter Estimate"), col = c("red", "blue", "purple"), lty = c(20,20,1))
 ```
