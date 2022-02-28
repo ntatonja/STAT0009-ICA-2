@@ -25,17 +25,21 @@ To present the most basic Monte Carlo algorithm, we took the following example. 
 
 ```{r}
 # Sampling - Basic Monte Carlo
-library(gamlss.dist)
 
+# Load in a necessary library and set the seed, for reproducability.
+library(gamlss.dist)
 set.seed(123)
 
+# Take a random sample from the exgaussian distribution and estimate the probability of the samples being above 3.
 basic <- rexGAUS(2000, 0.4, 0.1, 0.5)
-
 mean(basic>3)
 
+# Compare the mean to the true value
 true <- 1-pexGAUS(3, 0.4, 0.1, 0.5)
-1-mean(basic>3)/true #estimated value is around 16% lower than true value
+1-mean(basic>3)/true
+# Estimated value is around 16% lower than true value
 
+# Replicate samples for a later graph
 basics <- rep(0,100)
 for (i in 1:100) {
   bis <- rexGAUS(2000, 0.4, 0.1, 0.5)
@@ -45,7 +49,7 @@ for (i in 1:100) {
 ```
 ## Importance sampling
 
-It is clear that the Basic Monte Carlo method does not yield the best estimate in this situation as the exceedance probability we are calculating is very small, hence a larger sample size would be needed to increase precision. Generally speaking, Basic Monte Carlo often fails, as in most cases the distribution we want to sample from, $p$, is unknown, or sampling from it is not always possible or inefficient. An extension of the Basic Monte Carlo method, importance sampling (IS), could help in this situation. Importance sampling allows us to sample from an "instrumental distribution", $q$, instead of $p$, and then the sampled values will be weighted to correct for the fact that they were sampled from $q$, and not the target distribution $p$. This algorithm relies on the algebraic trick of multiplying and dividing by the same quantity, which leads to the "importance sampling fundamental identity" (Robert & Casella, 2004): $E_p[f(Y)] = \int \frac{p(y)}{q(y)}q(y)f(y) dy = E_q[w(Y)f(Y)]$, where $\frac{p(y)}{q(y)}$ is the importance weight. 
+It is clear that the Basic Monte Carlo method does not yield the best estimate in this situation as the exceedance probability we are calculating is very small, thus a lot of the samples are thrown away when calculating the probability, hence a larger sample size would be needed to increase precision. Generally speaking, Basic Monte Carlo often fails, as in most cases the distribution we want to sample from, $p$, is unknown, or sampling from it is not always possible or inefficient. An extension of the Basic Monte Carlo method, importance sampling (IS), could help in this situation. Importance sampling allows us to sample from an "instrumental distribution", $q$, instead of $p$, and then the sampled values will be weighted to correct for the fact that they were sampled from $q$, and not the target distribution $p$. This algorithm relies on the algebraic trick of multiplying and dividing by the same quantity, which leads to the "importance sampling fundamental identity" (Robert & Casella, 2004): $E_p[f(Y)] = \int \frac{p(y)}{q(y)}q(y)f(y) dy = E_q[w(Y)f(Y)]$, where $\frac{p(y)}{q(y)}$ is the importance weight. 
 
 Then, the algorithm for importance sampling for an expected value is as follows. First, $i = 1,\dots, N$, sample $y^{(i)} ∼ q(y)$. Then, for $i = 1,\dots, N$, compute the importance weight $w(i) =\frac{p(y^{(i)})}{q(y^{(i)})}$. Lastly, compute a weighted average to obtain the importance sampling estimate:$E^{IS}= \frac{1}{N} \sum^{N}_{i=1}w^{(i)}f(y^{(i)}).$
 
@@ -57,8 +61,10 @@ set of sampled values, where we resample a sample value $y^{(i)}$ with a probabi
 Still using the same example, we now try using importance sampling to estimate the exceedance probability $p(Y \geq 3)$, where $Y$ follows an ex-Gaussian distribution with the same parameters as before. We try two different instrumental distributions, first, a normal distribution truncated below at 3, with parameters $\mu = 3$ and $\sigma = 0.1$, then a shifted exponential distribution, shifted to the right by 3, with a rate $\tau = 0.5$. We use a sample size of N = 2000 in both cases. The below code will execute these two importance sampling algorithms. 
 
 ```{r}
-# Importance Sampling - Truncated Normal
+# Load in a necassary library
 library(truncnorm)
+
+# Importance Sampling - Truncated Normal
 ISnorm <- function(n){
   y <- rep(0,n)
   w <- rep(0,n)
@@ -72,16 +78,13 @@ ISnorm <- function(n){
 }
 gaussis <- ISnorm(2000)
 mean(gaussis$w[gaussis$y>3])
-plot(density(gaussis$y*gaussis$w))
-plot(density(gaussis$y*gaussis$w), xlim = c(0,0.05))
-hist(gaussis$y*gaussis$w, breaks = 120, xlim = c(0,0.2))
 
+# Replicate samples for a later graph
 gaussiss <- rep(0, 100)
 for (i in 1:100) {
   gis <- ISnorm(2000)
   gaussiss[i] <- mean(gis$w[gis$y>3])
 }
-hist(gaussiss)
 
 # Importance Sampling - Shifted Exponential
 ISexp <- function(n){
@@ -97,8 +100,8 @@ ISexp <- function(n){
 }
 expis <- ISexp(2000)
 mean(expis$w)
-hist(expis$y*expis$w, breaks = 5, xlim = c(0,0.2))
 
+# Replicate samples for the next graph
 expiss <- rep(0,100)
 for (i in 1:100) {
   eis <- ISexp(2000)
@@ -164,9 +167,9 @@ SIS <- function(n,times){
   return(list(postmu = colSums(mu*wts), postsig = colSums(sig*wts)))
 }
 seqposts <- SIS(200,100)
-plot(seqposts$postmu, main=expression(mu),xlab="Time point (t)",ylab="Value")
+plot(seqposts$postmu, main=expression(mu), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
-plot(seqposts$postsig, main=expression(sigma),xlab="Time point (t)",ylab="Value")
+plot(seqposts$postsig, main=expression(sigma), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
 ```
 
@@ -213,9 +216,9 @@ ReSIS <- function(n,times){
   return(list(postmu = rowMeans(resamplemu), postsig = rowMeans(resamplesig)))
 }
 seqposts <- ReSIS(20000,100)
-plot(seqposts$postmu, main=expression(mu),xlab="Time point (t)",ylab="Value",ylim=c(range(seqposts$postmu)[1],5.2))
+plot(seqposts$postmu, main=expression(mu), xlab="Time point(t)", ylab="Value", ylim=c(range(seqposts$postmu)[1], 5.2))
 abline(h=5,col="red",lty=2)
-plot(seqposts$postsig, main=expression(sigma),xlab="Time point (t)",ylab="Value")
+plot(seqposts$postsig, main=expression(sigma), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
 
 ```
