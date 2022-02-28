@@ -173,9 +173,15 @@ By looking at the plots above, it is clear that as $t$ increases, the estimated 
 To overcome the issue of weight degeneracy, an extra step of resampling is introduced in the Sequential Monte Carlo algorithms. Resampling allows for particles to be sampled with replacement from the set of all particles, with a probability that
 depends on the importance weights. The key idea is to reproduce particles with large weights and discard those with small weights, as they have little to no effect on the estimates anyway. An additional benefit of resampling is that while the Sequential Importance sampling (SIS) samples were not distributed according to the target distribution $p$ but followed the instrumental distribution $q$, the resampled values are (approximately) distributed according to $p$. 
 
-There are various sampling schemes, such as multinomial resampling, residual resampling, stratified resampling, and systematic resampling. The simplest one is multinomial sampling, which draws $N$ samples from a multinomial distribution for all $i = 1, \dots, N$, with probabilities $p(i) =W^{(i)}$ . After resampling, the weights are set to $W^{(i)} = 1/N$. A drawback of multinomial sampling is that it increases the variance of the estimator. Alternative sampling schemes have been introduced with smaller variances. Residual resampling is a method that uses a mix of deterministic and random resampling approaches. To keep the estimator unbiased, the expected number of replications of each particle $i$ are set to be equal to $NW^{(i)}$ . As this is not an integer, residual resampling takes the integer part of each $NW^{(i)}$ term and replicates each sample value deterministically according to that number. The remaining particles are then generated through multinomial resampling from a distribution determined by the non-integer parts of each $NW^{(i)}$ term.
+There are various sampling schemes, such as multinomial resampling, residual resampling, stratified resampling, and systematic resampling. The simplest one is multinomial sampling, which draws $N$ samples from a multinomial distribution for all $i = 1, \dots, N$, with probabilities $p(i) =W^{(i)}$ . After resampling, the weights are set to $W^{(i)} = 1/N$. A drawback of multinomial sampling is that it increases the variance of the estimator. Alternative sampling schemes have been introduced with smaller variances.
 
+Residual resampling is a method that uses a mix of deterministic and random resampling approaches. To keep the estimator unbiased, the expected number of replications of each particle $i$ are set to be equal to $NW^{(i)}$ . As this is not an integer, residual resampling takes the integer part of each $NW^{(i)}$ term and replicates each sample value deterministically according to that number. The remaining particles are then generated through multinomial resampling from a distribution determined by the non-integer parts of each $NW^{(i)}$ term.
 
+Stratified resampling also uses a partially deterministic replication of particles. This method is based on the principles of stratified sampling often used in survey research. It uses the weights to form an "empirical" cumulative distribution over the sampled values, and then this distribution is split into $N$ equally sized strata, and a single draw is taken from each stratum. 
+
+Finally, the most popular resampling scheme, systematic resampling is based on the same idea as stratified resampling, however, it reduces the Monte Carlo variance further by using a single random number instead of different ones, to sample from each stratum. While systematic resampling is simple to implement and usualy performs well, contrary to residual and stratified resampling, it is not guaranteed to outperform multinomial resampling.
+
+The below code shows a simulation for multinomial resampling, using the same example as before for SIS. By comparing the plots from SIS and multinomial resampling, it is clear that the latter performs better than the algorithm without resampling.
 
 ```{r}
 
@@ -205,7 +211,9 @@ ReSIS <- function(n,times){
   #return(list(postmu = colSums(mu*wts), postsig = colSums(sig*wts)))
 }
 seqposts <- ReSIS(20000,100)
-plot(seqposts$postmu)
-plot(seqposts$postsig)
+plot(seqposts$postmu, main=expression(mu),xlab="Time point (t)",ylab="Value",ylim=c(range(seqposts$postmu)[1],5.2))
+abline(h=5,col="red",lty=2)
+plot(seqposts$postsig, main=expression(sigma),xlab="Time point (t)",ylab="Value")
+abline(h=5,col="red",lty=2)
 
 ```
