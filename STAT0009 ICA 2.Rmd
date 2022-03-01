@@ -23,28 +23,18 @@ To calculate an expected value $E_p[f(Y)]$, where $Y$ is a random variable with 
 
 To present the most basic Monte Carlo algorithm, we took the following example. Y is a random variable following an ex-Gaussian distribution with parameters $\mu=0.4$, $\sigma=0.1$ and $\tau=0.5$. An ex-Gaussian distribution is often used to model response times, and it is defined as the sum of an exponential and a normally distributed variable, and has three parameters: $\mu$, $\sigma$ and $\tau$, which are the mean and standard deviation of the Gaussian variable, and the rate of the exponential variable, respectively. Y represents the time it takes for a person to complete a given task. We want to estimate the probability that it takes more than 3 seconds for a person to complete this task, $p(Y \geq 3)$. To calculate this, we sampled from an ex-Gaussian distribution and calculated the sample mean of the values that were larger than 3.  Sampling from an ex-Gaussian distribution is easy to do in $\texttt{R}$, using the $\texttt{rexGAUS}$ function in the $\texttt{gamlss.dist}$ package. The following code chunk will demonstrate this.  With a sample size of 2000, this gave an estimate $p(Y ≥ 3) ≈ 0.0045$. This is significantly (around 20%) lower compared to the true value, $p(Y ≥ 3) = 0.0056$.
 
+Basic Monte Carlo. The following code chunk is structured as follows: first, a necessary library is loaded in to evaluate the ex-Gaussian distribution. The seed is set for reproducability, and samples from the ex-Gaussian distribution are taken. The probability of the samples going above 3 is estimated, and this is compared to the true probability.
 ```{r}
 # Sampling - Basic Monte Carlo
 
-# Load in a necessary library and set the seed, for reproducability.
 library(gamlss.dist)
 set.seed(123)
 
-# Take a random sample from the exgaussian distribution and estimate the probability of the samples being above 3.
 basic <- rexGAUS(2000, 0.4, 0.1, 0.5)
 mean(basic>3)
 
-# Compare the mean to the true value
 true <- 1-pexGAUS(3, 0.4, 0.1, 0.5)
 1-mean(basic>3)/true
-# Estimated value is around 16% lower than true value
-
-# Replicate samples for a later graph
-basics <- rep(0,100)
-for (i in 1:100) {
-  bis <- rexGAUS(2000, 0.4, 0.1, 0.5)
-  basics[i] <- mean(bis>3)
-}
 
 ```
 ## Importance sampling
@@ -60,6 +50,7 @@ set of sampled values, where we resample a sample value $y^{(i)}$ with a probabi
 
 Still using the same example, we now try using importance sampling to estimate the exceedance probability $p(Y \geq 3)$, where $Y$ follows an ex-Gaussian distribution with the same parameters as before. We try two different instrumental distributions, first, a normal distribution truncated below at 3, with parameters $\mu = 3$ and $\sigma = 0.1$, then a shifted exponential distribution, shifted to the right by 3, with a rate $\tau = 0.5$. We use a sample size of N = 2000 in both cases. The below code will execute these two importance sampling algorithms. 
 
+Importance Sampling. The following code chunk is structured as follows: first, a necessary library is loaded in to evaluate the truncated normal distribution. For the the truncated normal distribution and the shifted exponential distribution, functions are written to generate the importance samples, taking the number of samples wanted as an argument. Importance samples are generated and their weights are calculated, for both distributions. Since probabilities are of interest here, the corresponding function $f$ when calculating the importance sample estimate is just the indicator function, thus only an average of the weights for which the corresponding sample values go above 3 are taken. In the case of the shifted exponential distribution, all sample values are above 3, thus only the average of the weights is calculated.
 ```{r}
 # Load in a necassary library
 library(truncnorm)
@@ -69,8 +60,8 @@ ISnorm <- function(n){
   y <- rep(0,n)
   w <- rep(0,n)
   for(i in 1:n){
-    yi <- rtruncnorm(1,3,mean = 3,sd=0.1)
-    wi <- max( c(dexGAUS(yi,0.4,0.1,0.5)/dtruncnorm(yi,3,mean = 3,sd=0.1), 0), na.rm = T )
+    yi <- rtruncnorm(1, 3, mean=3, sd=0.1)
+    wi <- max( c(dexGAUS(yi,0.4,0.1,0.5)/dtruncnorm(yi,3,mean=3,sd=0.1), 0), na.rm = T )
     y[i] <- yi
     w[i] <- wi
   }
@@ -78,13 +69,6 @@ ISnorm <- function(n){
 }
 gaussis <- ISnorm(2000)
 mean(gaussis$w[gaussis$y>3])
-
-# Replicate samples for a later graph
-gaussiss <- rep(0, 100)
-for (i in 1:100) {
-  gis <- ISnorm(2000)
-  gaussiss[i] <- mean(gis$w[gis$y>3])
-}
 
 # Importance Sampling - Shifted Exponential
 ISexp <- function(n){
@@ -101,14 +85,32 @@ ISexp <- function(n){
 expis <- ISexp(2000)
 mean(expis$w)
 
-# Replicate samples for the next graph
+```
+
+Here, each of the previous 3 methods for sampling are repeated 100 times, each time giving an estimated of the mean. These estimates are then plotted on histograms, so that each of the methods can be compared.
+```{r}
+# Replicate basic MC samples
+basics <- rep(0,100)
+for (i in 1:100) {
+  bis <- rexGAUS(2000, 0.4, 0.1, 0.5)
+  basics[i] <- mean(bis>3)
+}
+
+# Replicate Importance samples using a truncated normal
+gaussiss <- rep(0, 100)
+for (i in 1:100) {
+  gis <- ISnorm(2000)
+  gaussiss[i] <- mean(gis$w[gis$y>3])
+}
+
+# Replicate Importance samples using a shifted exponential
 expiss <- rep(0,100)
 for (i in 1:100) {
   eis <- ISexp(2000)
   expiss[i] <- mean(eis$w)
 }
 
-#Plotting the histograms from all three methods
+# Plotting the histograms from all three methods
 par(mfrow=c(1,3))
 hist(basics,main="Basic Monte Carlo",ylim=c(0,100),xlab="Estimate",xlim=c(0,0.015))
 abline(v=0.0056,col="red",lty=2) #this adds a vertical line at the true value
@@ -139,27 +141,27 @@ In real life it is often the case that observations come in sequentially, one af
 Sequential Importance Sampling (SIS) is an algorithm that could solve this problem as it has an approximately fixed computational cost at each time point. SIS uses information from previous observations and samples, thus it can provide more efficient importance distributions than just using basic importance sampling. Sequential Importance Sampling computes the importance weights incrementally by multiplying the importance weight at the previous time $t-1$ by an incremental weight update $a^{(i)}_t$. The importance weights are defined as follows:$$w^{(i)}_t =\frac {p(\theta^{(i)}|y_{1:t})q_{t-1}(\theta^{(i)})} {p(\theta^{(i)}|y_{1:t-1})q_t(\theta^{(i)})} \frac{p(\theta^{(i)}|y_{1:t-1})}{q_{t-1}(\theta^{(i)})},$$
 where the incremental weight update is defined as $$a^{(i)}_t= \frac {p(\theta^{(i)}|y_{1:t})}{p(\theta^{(i)}|y_{1:t-1})}\times \frac{q_{t-1}(\theta^{(i)})}{q_t(\theta^{(i)})}.$$
 
-While this still requires lengthy computations, it can be simplified in certain cases. Assuming that observations are conditionally independent and that the importance distribution is time invariant (i.e. $q_t(\theta) = q_{t-1}(\theta) = q(\theta) $), and using self-normalised importance weights, we can simplify the incremental weight update as $a^{(i)}_t=p(y_t|\theta^{(i)}).$
+While this still requires lengthy computations, it can be simplified in certain cases. Assuming that observations are conditionally independent and that the importance distribution is time invariant (i.e. $q_t(\theta) = q_{t-1}(\theta) = q(\theta)$), and using self-normalised importance weights, we can simplify the incremental weight update as $a^{(i)}_t=p(y_t|\theta^{(i)}).$
 
 Then, the algorithm for Sequential Importance Sampling with time invariant parameters is as follows. First, for $i = 1, \dots, N$, sample $\theta^{(i)} ∼ q(\theta )$, then compute the normalised weights $W^{(i)}_0 \propto \frac{p(\theta)}{q(\theta )}$ with $\sum^N_{j=1} W^{(i)}_0 = 1.$ Then, for $t = 1, \dots, t$, reweight the normalised weights for $i = 1, \dots, N$, by computing $W^{(i)}_t \propto p(y_t|\theta^{(i)})W^{(i)}_{t−1}$,with $\sum^N_{i=1} W^{(i)}_t = 1.$ Finally, for $t = 1, \dots, t$ compute the (self-normalised) SIS estimate $E^{SISn}_{t} =\sum ^N_{i=1}W^{(i)}_t f(\theta^{(i)})$.
 
-We will demonstrate how this algorithm works in the following example, whereby we want to sequentially infer the posterior mean and variance of a Gaussian random variable. We assume that the observations are independent and that they come from a Normal distribution with an unknown mean $\mu$ and variance $\sigma^2$. Hence, the unknown parameter $\theta$ is a vector $\theta=(\mu,\sigma)$. Our prior distributions for $\mu$ and $\sigma^2$ - which we will also use as the importance distributions - are a Gaussian distribution with mean 0 and standard deviation 10, and a uniform distribution between 0 and 50, for $\mu$ and $\sigma$ respectively. Then, we apply the algorithm to 100 observations from a Normal(5,5) distribution, using a sample of size N = 200. The following code shows a simulation of this example.
+We will demonstrate how this algorithm works in the following example, whereby we want to sequentially infer the posterior mean and variance of a Gaussian random variable. We assume that the observations are independent and that they come from a Normal distribution with an unknown mean $\mu$ and variance $\sigma^2$. Hence, the unknown parameter $\theta$ is a vector $\theta=(\mu,\sigma)$. Our prior distributions for $\mu$ and $\sigma$ - which we will also use as the importance distributions - are a Gaussian distribution with mean 0 and standard deviation 10, and a uniform distribution between 0 and 50, for $\mu$ and $\sigma$ respectively. Then, we apply the algorithm to 100 observations from a Normal(5,5) distribution, using a sample of size N = 200. The following code shows a simulation of this example.
 
+Sequential Importance Sampling. The following code chunk is structured as follows: a function is created which takes as inputs the number of samples to use from the prior and the number of time steps in the sequence. Since the prior distributions for $\mu$ and $\sigma$ will also act as instrumental distributions, the initial weights are uniform. The samples from the prior are generated. This is followed by the observations and their corresponding weights being generated at each time point. The weights are normalised, and the posterior expected values for $\mu$ and $\sigma$ are outputted, for each time point. The results from the algorithm being applied are then plotted.
 ```{r}
-SIS <- function(n,times){
-  mu <- rep(0,n)
-  sig <- rep(0,n)
-  obs <- rep(0,times)
-  w <- rep(1/n,n)
-  wts <- matrix(0,ncol=times,nrow=n)
+# Sequential Importance Sampling
+SIS <- function(n, times){
+  mu <- rep(0, n)
+  sig <- rep(0, n)
+  obs <- rep(0, times)
+  w <- rep(1/n, n)
+  wts <- matrix(0, ncol=times, nrow=n)
   for(i in 1:n){
     mu[i] <- rnorm(1,0,10)
     sig[i] <- runif(1,0,50)
   }
-  for(i in 1:times){
-    obs[i] <- rnorm(1,mean=5,sd=5) 
-  }
   for(i in 1:times) {
+    obs[i] <- rnorm(1,mean=5,sd=5)
     w <- w*dnorm(obs[i],mean=mu,sd=sig)
     w <- w/sum(w)
     wts[,i] <- w
@@ -167,10 +169,13 @@ SIS <- function(n,times){
   return(list(postmu = colSums(mu*wts), postsig = colSums(sig*wts)))
 }
 seqposts <- SIS(200,100)
+
+# Plot the results
 plot(seqposts$postmu, main=expression(mu), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
 plot(seqposts$postsig, main=expression(sigma), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
+
 ```
 
 By looking at the plots above, it is clear that as $t$ increases, the estimated posterior mean of $\sigma$ gets fairly close to the true value, 5, however, the estimated posterior mean of $\mu$ is slightly further away from it. This is due to a problem called weight degeneracy, where the weight of almost all particles becomes negligible as $t$ increases. This results in the posterior mean being essentially estimated by a single sample value, which is not necessarily the one closest to the true value. The reason behind weight degeneracy is that the importance distribution becomes less and less efficient over time. One measure for detecting weight degeneracy is the effective sample size, which is defined as $N^{eff}= \frac {1} {\sum^{N}_{i=1} (W^{(i)})^2}.$ It takes values between 1 and N, so lower effective sample size indicates stronger weight degeneracy.
@@ -190,16 +195,17 @@ Finally, the most popular resampling scheme, systematic resampling is based on t
 
 The below code shows a simulation for multinomial resampling, using the same example as before for SIS. By comparing the plots from SIS and multinomial resampling, it is clear that the latter performs better than the algorithm without resampling.
 
+Sequential Importance Sampling Resampling. The function works almost the same as SIS, excpet at the end there is also a resampling step. As previously stated, after resampling the resampled values are all treated with equal weight, so the average values across the time points is taken and output. The results from the algorithm being applied are then plotted.
 ```{r}
-
+# Multinomial Resampling
 ReSIS <- function(n,times){
-  mu <- rep(0,n)
-  sig <- rep(0,n)
-  obs <- rep(0,times)
-  w <- rep(1/n,n)
-  wts <- matrix(0,ncol=times,nrow=n)
-  resamplemu <- matrix(0,ncol=n,nrow=times+1)
-  resamplesig <- matrix(0,ncol=n,nrow=times+1)
+  mu <- rep(0, n)
+  sig <- rep(0, n)
+  obs <- rep(0, times)
+  w <- rep(1/n, n)
+  wts <- matrix(0, ncol=times, nrow=n)
+  resamplemu <- matrix(0, ncol=n, nrow=times+1)
+  resamplesig <- matrix(0, ncol=n, nrow=times+1)
   for(i in 1:n){
     mu[i] <- rnorm(1,0,10)
     sig[i] <- runif(1,0,50)
@@ -207,8 +213,8 @@ ReSIS <- function(n,times){
   resamplemu[1,] <- mu
   resamplesig[1,] <- sig
   for(i in 1:times) {
-    obs[i] <- rnorm(1,mean=5,sd=5)
-    wt <- w*dnorm(obs[i],mean=resamplemu[i,],sd=resamplesig[i,])
+    obs[i] <- rnorm(1, 5, 5)
+    wt <- w*dnorm(obs[i], resamplemu[i,], resamplesig[i,])
     wt <- wt/sum(wt)
     resamplemu[i+1,] <- sample(resamplemu[i,], n, replace = T, prob = wt)
     resamplesig[i+1,] <- sample(resamplesig[i,], n, replace = T, prob = wt)
@@ -216,7 +222,9 @@ ReSIS <- function(n,times){
   return(list(postmu = rowMeans(resamplemu), postsig = rowMeans(resamplesig)))
 }
 seqposts <- ReSIS(20000,100)
-plot(seqposts$postmu, main=expression(mu), xlab="Time point(t)", ylab="Value", ylim=c(range(seqposts$postmu)[1], 5.2))
+
+# Plot the results
+plot(seqposts$postmu, main=expression(mu), xlab="Time point (t)", ylab="Value", ylim=c(range(seqposts$postmu)[1], 5.2))
 abline(h=5,col="red",lty=2)
 plot(seqposts$postsig, main=expression(sigma), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
