@@ -131,7 +131,7 @@ par(mfrow=c(1,1))
 By looking at the results, it is clear that using the shifted exponential distribution resulted in a much better estimate, which is very close to the true value, whereas the truncated normal one actually yielded a worse result, than basic Monte Carlo. Therefore, it is clear that the choice of the importance distribution strongly affects the outcome. 
 Looking at the last plot with the three histograms, we can see that the three estimators have very different variances after we have applied them 100 times. This is due to the large variation in importance weights. Both basic Monte Carlo integration and importance sampling with the truncated Normal provide highly variable estimates, whereas IS with the shifted exponential distribution yields estimates that are tightly clustered around the true value, 0.0056 (indicated by the dashed red line). While these estimates are still unbiased, the large variance of the estimates for Basic Monte Carlo integration and IS with a truncated Normal distribution means that in practice, we are usually far from the true value. 
 
-The optimal importance distribution $q*$ would minimise the variance of the estimator, so that $q*(y) =\frac{|f(y)|p(y)}{\int|f(y)|p(y)} dy$. However, the integral in the denominator is often unknown, so this is rarely used in real life. A more practical way to improve the efficiency of the estimators is to normalise the importance weights, so that $W^{(i)} = \frac{w^{(i)}}{\sum_{j=1}^N w^{(j)}}$, which results in the "self-normalized" IS estimator, $E^{ISn}=\sum^N_{i=1}W^{(i)}f(y^{(i)})$. This estimator is biased, however, it diminishes as the sample size increases and is usually offset by the gain in efficiency.
+The optimal importance distribution $q*$ would minimise the variance of the estimator, so that $q*(y) =\frac{|f(y)|p(y)}{\int|f(y)|p(y)} dy$. However, the integral in the denominator is often unknown, so this is rarely used in real life. A more practical way to improve the efficiency of the estimators is to normalise the importance weights, so that $W^{(i)} = \frac{w^{(i)}}{\sum_{j=1}^N w^{(j)}}$, which results in the "self-normalised" IS estimator, $E^{ISn}=\sum^N_{i=1}W^{(i)}f(y^{(i)})$. This estimator is biased, however, it diminishes as the sample size increases and is usually offset by the gain in efficiency.
 
 
 ## Sequential Importance Sampling
@@ -231,8 +231,11 @@ abline(h=5,col="red",lty=2)
 
 ```
 
-## Particle Filter
+## Particle Filters: SMC for state-space models
 
+### SIS for state-space models (section 4.2)
+
+As before, our goal is to estimate some unknown parameter $\theta$, which in the case of state-space models, is a vector of the hidden states $\phi_{0:t}$. Sequential Importance Sampling (SIS) is used, which incrementally builds up the importance sample, starting  with the sample ${\phi^{(i)}_0}$ at t=0, then sampling values $\phi^{(i)}_i$ at times $i=1,..t$ conditional on the previous sample. Then, the importance distribution at time t is defined as $q_t(\phi_{0:t}) = q_t(\phi_t|\phi_{0:t−1})q_{t−1}(\phi_{0:t−1})$. Given that $q_{t−1}(\phi_{0:t}) = q_{t−1}(\phi_{0:t−1})$, and combining this with the importance distribution, the incremental weight update, $a^{(i)}_t$, can be written as $a^{(i)}_t=\frac {p(y_t|\phi^{(i)}_t)p(\phi^{(i)}_t|\phi^{(i)}_{t−1})}{p(y_t|y_{1:t−1})q_t(\phi^{(i)}_t|\phi^{(i)}_{0:t−1})}$.
 ```{r}
 # Bootstrap Filter
 
