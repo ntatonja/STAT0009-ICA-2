@@ -178,7 +178,7 @@ abline(h=5,col="red",lty=2)
 
 ```
 
-By looking at the plots above, it is clear that as $t$ increases, the estimated posterior mean of $\sigma$ gets fairly close to the true value, 5, however, the estimated posterior mean of $\mu$ is slightly further away from it. This is due to a problem called weight degeneracy, where the weight of almost all particles becomes negligible as $t$ increases. This results in the posterior mean being essentially estimated by a single sample value, which is not necessarily the one closest to the true value. The reason behind weight degeneracy is that the importance distribution becomes less and less efficient over time. One measure for detecting weight degeneracy is the effective sample size, which is defined as $N^{eff}= \frac {1} {\sum^{N}_{i=1} (W^{(i)})^2}.$ It takes values between 1 and N, so lower effective sample size indicates stronger weight degeneracy.
+By looking at the plots above, it is clear that as $t$ increases, the estimated posterior mean of $\sigma$ gets fairly close to the true value, 5, however, the estimated posterior mean of $\mu$ is slightly further away from it. This is due to a problem called weight degeneracy, where the weight of almost all particles becomes negligible as $t$ increases. This results in the posterior mean being essentially estimated by a single sample value, which is not necessarily the one closest to the true value. Thus new particles stick to the one before it. The reason behind weight degeneracy is that the importance distribution becomes less and less efficient over time, as almost all weight for determining the next particle is placed on only the previous particle, rather than using the whole importance distribution. One measure for detecting weight degeneracy is the effective sample size, which is defined as $N^{eff}= \frac {1} {\sum^{N}_{i=1} (W^{(i)})^2}.$ It takes values between 1 and N, so lower effective sample size indicates stronger weight degeneracy.
 
 ## Resampling
 
@@ -230,6 +230,8 @@ plot(seqposts$postsig, main=expression(sigma), xlab="Time point (t)", ylab="Valu
 abline(h=5,col="red",lty=2)
 
 ```
+
+Here resampling has allowed the posterior to stay close to the true values much better for both $\mu$ and $\sigma$, than for SIS without resampling. The points may be a little bit more variable, but the problem of weight degeneracy has been overcome.
 
 ## Particle Filters: SMC for state-space models
 
@@ -356,10 +358,12 @@ for(t in 1:Tp) {
 }
 
 # Plot the final results
-plot(1:Tp, y, col = "blue", pch = 20, xlab = "Time Points", ylab = "",
+plot(1:Tp, y, col = "blue", pch = 20, xlab = "Time Points", ylab = "Values",
      main = "Gaussian Latent Process")
 points(theta, col="red", pch = 20)
 lines(0:Tp, rowSums(P*W), col = "purple")
-legend("bottomleft", c("True State", "Observed State", "Particle Filter Estimate"),
+legend("topleft", c("True State", "Observed State", "Particle Filter Estimate"),
        col = c("red", "blue", "purple"), lty = c(20,20,1))
 ```
+
+The bootstrap filter does well at sequentially estimating the new latent states at each time point, despite the relativly high variability shown by the observed states.
