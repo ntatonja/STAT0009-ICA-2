@@ -233,11 +233,11 @@ abline(h=5,col="red",lty=2)
 
 ## Particle Filters: SMC for state-space models
 
+When it comes to the filtering problems, the aim is to detect the true state of a process $\phi_{t}$ at time $t$. However, this state is not observed (latent). Instead some observation $y_{t}$ is seen, which is a distortion of the true state. In other words, there is an additional error term such that $\phi_{t} = y_{t} + \epsilon_t$. We can tackle problems of inferring the true state by using Bayesian methods: as each new observation comes in, a posterior distribution is calculated, using the available data from all of the previous time points - $p\left(\phi_{1} \mid y_{1}\right), \ldots, p\left(\phi_{t} \mid y_{1: t}\right)$.
+
 ### State-space models (section 4.1)
 
-When it comes to the filtering problems, we track the hidden states $\phi_{t}$ of a stochastic process as each observation $y_{t}$ comes in. In Bayesian statistics, we do this by computing posterior distributions sequentially, as subsequent dimensions are added - $p\left(\phi_{1} \mid y_{1}\right), \ldots, p\left(\phi_{t} \mid y_{1: t}\right)$. 
-
-To describe time-series of observations state-space models are used. They consist of observations $y_{1: t}$ that are realisations of the hidden states $\phi_{0: t}$. In these type of models, we have two significant assumptions:
+To describe time-series of observations state-space models are used. They consist of observations $y_{1: t}$ that are realisations of the hidden states $\phi_{0: t}$. In these type of models, we have two significant simplifying assumptions:
 
 - each observation $y_{t}$ depends only on the current state $\phi_{t}$ - we can say that observations are conditionally independent given the hidden states
 $$
@@ -254,7 +254,7 @@ $$
 p\left(\phi_{0: T} \mid y_{1: T}\right)=\frac{p\left(\phi_{0}\right) \prod_{t=1}^{T} p\left(y_{t} \mid \phi_{t}\right) p\left(\phi_{t} \mid \phi_{t-1}\right)}{p\left(y_{1: T}\right)}
 $$
 
-or alternatively - recursive posteriors:
+More importantly the posterior distributions can be calculated recursively:
 
 $$
 p\left(\phi_{0: t} \mid y_{1: t}\right)=\frac{p\left(y_{t} \mid \phi_{t}\right) p\left(\phi_{t} \mid \phi_{t-1}\right)}{p\left(y_{t} \mid y_{1: t-1}\right)} p\left(\phi_{0: t-1} \mid y_{1: t-1}\right)
@@ -265,83 +265,57 @@ where
 $$
 p\left(y_{t} \mid y_{1: t-1}\right)=\iint p\left(y_{t} \mid \phi_{t}\right) p\left(\phi_{t} \mid \phi_{t-1}\right) p\left(\phi_{t-1} \mid y_{1: t-1}\right) \mathrm{d} \phi_{t-1} \mathrm{~d} \phi_{t} 
 $$ 
-is a normalising constant.
+is a normalising constant. Calculating posteriors recursively is a central concept to the next few sections.
 
 ### SIS for state-space models (section 4.2)
 
-As before, our goal is to estimate some unknown parameter $\theta$, which in the case of state-space models, is a vector of the hidden states $\phi_{0:t}$. Sequential Importance Sampling (SIS) is used, which incrementally builds up the importance sample, starting  with the sample ${\phi^{(i)}_0}$ at t=0, then sampling values $\phi^{(i)}_i$ at times $i=1,..t$ conditional on the previous sample. Then, the importance distribution at time t is defined as $q_t(\phi_{0:t}) = q_t(\phi_t|\phi_{0:t−1})q_{t−1}(\phi_{0:t−1})$. Given that $q_{t−1}(\phi_{0:t}) = q_{t−1}(\phi_{0:t−1})$, and combining this with the importance distribution, the incremental weight update, $a^{(i)}_t$, can be written as $a^{(i)}_t=\frac {p(y_t|\phi^{(i)}_t)p(\phi^{(i)}_t|\phi^{(i)}_{t−1})}{p(y_t|y_{1:t−1})q_t(\phi^{(i)}_t|\phi^{(i)}_{0:t−1})}$. This can be further simplified when using normalised importance weights, as the $p(y_t|y_{1:t−1})$ term can be ignored. As previously with SIS, this algorithm now has approximately constant computational costs, because the weight update works in such a way that there is no need to revisit all the previous observations and hidden states, only the most recent one is conditioned  on. The choice of the importance distribution $q_t(\phi_t|\phi_{0_t-1})$ is still important for minimising the variance of the importance weights. However, even with the "optimal" importance distribution, SIS for state-space models can suffer from the same problem as the basic SIS algorithm; weight degeneracy.
+As before, our goal is to estimate some unknown parameter $\theta$, which in the case of state-space models, is a vector of the hidden states $\phi_{0:t}$. Sequential Importance Sampling (SIS) is used, which incrementally builds up the importance sample, starting  with the sample ${\phi^{(i)}_0}$ at t=0, then sampling values $\phi^{(i)}_i$ at times $i=1,..t$ conditional on the previous sample. Then, the importance distribution at time t is defined as $q_t(\phi_{0:t}) = q_t(\phi_t|\phi_{0:t−1})q_{t−1}(\phi_{0:t−1})$. Given that $q_{t−1}(\phi_{0:t}) = q_{t−1}(\phi_{0:t−1})$, and combining this with the importance distribution, the incremental weight update, $a^{(i)}_t$, can be written as $a^{(i)}_t=\frac {p(y_t|\phi^{(i)}_t)p(\phi^{(i)}_t|\phi^{(i)}_{t−1})}{p(y_t|y_{1:t−1})q_t(\phi^{(i)}_t|\phi^{(i)}_{0:t−1})}$. This can be further simplified when using normalised importance weights, as the $p(y_t|y_{1:t−1})$ term can be ignored. As previously with SIS, this algorithm now has approximately constant computational costs, because the weight update works in such a way that there is no need to revisit all the previous observations and hidden states, only the most recent one is conditioned  on. The choice of the importance distribution $q_t(\phi_t|\phi_{0_t-1})$ is still important for minimising the variance of the importance weights. However, even with the "optimal" importance distribution, SIS for state-space models can suffer from the same problem as the basic SIS algorithm - weight degeneracy.
 
 ### 4.3 A generic particle filter
 
-We can use Sequential Monte Carlo methods and Sequential Importance sampling with resampling to respond the problem of weight degeneracy. Thanks to resampling, the particles with low weights are removed and those with high weights are replicated - we achieve the set of uniformly weighted particles that are approx. distributed according to the posterior $p(\phi_{0:t}|y_{1:t})$. Sequentially, at the new time points, the new hidden states are added from a conditional importance sampling -  $q_{t+1}(\phi_{t+1}^{(i)}| \phi_{0:t}^{(i)})$. A generic particle filter algorithm is as follows: firstly for samples $i=1,2,...,N$ we have $\tilde{\phi}_{0}^{(i)} \sim q\left(\phi_{0}\right)$ and we use that to calculate the normalised importance weights $\tilde{W}_{0}^{(i)} \propto \frac{p\left(\phi_{0}^{(i)}\right)}{q\left(\tilde{\phi}_{0}^{(i)}\right)}$, where $\sum_{i=1}^{N} \tilde{W}_{t}^{(i)}=1 .$ For every sample $i=1,2,...,N$  in $t$ the hidden states are: $\phi_{t}^{(i)} \sim q_{t}\left(\phi_{t} \mid \tilde{\phi}_{0: t-1}^{(i)}\right)$ and we add new dimension to the particles $\phi_{0: t}^{(i)}= \left(\tilde{\phi}_{0: t-1}^{(i)}, \phi_{t}^{(i)}\right)$. 
-We normalise weights $W_{t}^{(i)} \propto \frac{p\left(y_{t} \mid \phi_{t}^{(i)}\right) p\left(\phi_{t}^{(i)} \mid \phi_{t-1}^{(i)}\right)}{q_{t}\left(\phi_{t}^{(i)} \mid \phi_{0: t-1}^{(i)}\right)} \tilde{W}_{t-1}^{(i)}$ where $\sum_{i=1}^{N} w_{t}^{(i)}=1$. We calculate the estimate:
-$E_{t}^{\mathrm{PFn}}=\sum_{i=1}^{N} f\left(\phi_{0: t}^{(i)}\right) W_{t}^{(i)}.$ If $N_{\text {eff }} \leq c N$, we resample $\left\{\tilde{\phi}_{0: t}^{(i)}\right\}$ with replacement from $\left\{\phi_{0: t}^{(i)}\right\}$ with the normalized weights $W_{t}^{(i)}$ and  $\tilde{w}_{t}^{(1)}=1 / N$ to achieve a set of equally weighted particles $\left\{\tilde{\phi}_{t}^{(i)}, \tilde{W}^{(i)}=1 / N\right\} ;$ else set $\left\{\tilde{\phi}_{0: t}^{(i)}, \tilde{W}_{t}^{(i)}\right\}=\left\{\phi_{0: t}^{(i)}, W_{t}^{(i)}\right\}$. 
+We can use Sequential Monte Carlo methods and Sequential Importance sampling with resampling to respond the problem of weight degeneracy. Thanks to resampling, the particles with low weights are removed and those with high weights are replicated - we achieve the set of uniformly weighted particles that are approx. distributed according to the posterior $p(\phi_{0:t}|y_{1:t})$. Sequentially, at the new time points, the new hidden states are added from a conditional importance distribution -  $q_{t+1}(\phi_{t+1}^{(i)}| \phi_{0:t}^{(i)})$. A generic particle filter algorithm is as follows: 
 
-Resampling is associated with the additional variance in estimatates. If $c=1$, then we establish resampling at each time point. However, when we don't have much problem with degeneracy of importance weights, we might set $c=0.5$. In this case, we rasample only if we encounter sufficient evidence for weight degeneracy. We get two particle approximations at each time point- before resampling and after resampling; both of them are unbiased, but after resampling has generally lower variance. In this general particle filter we obtain a weighted sample of state sequences $\phi_{0: t}^{(i)}=\left(\phi_{0}^{(i)}, \phi_{1}^{(i)}, \ldots, \phi_{t}^{(i)}\right)$ that approximates a posterior over
-state sequences $p\left(\phi_{0: t} \mid y_{1: t}\right)$.
-Combining our calculations we get the estimator $E_{t}^{\mathrm{PFn}}$ over these sequences: $E^{\mathrm{PFn}}=\sum_{i=1}^{n} W_{t}^{(i)} f\left(\phi_{t}^{(i)}\right)$.
+Initialise:
 
-In the literature, we may find several variations of generic particle filter algorithm, e.g. the bootstrap filter and the auxilliary particle filter. Furthermore, it was proved that generally, Sequential Monte Carlo algorithms (and generic particle filter as one of them) satisfy Central Limit Theorem in a sense that as the number of particles grow to infinity, Sequential Monte Carlo estimates are normally distributed with mean around the true value.
+Firstly take $i=1,2,...,N$ samples from the initial distribution $\tilde{\phi}_{0}^{(i)} \sim q\left(\phi_{0}\right)$ and we use the samples to calculate the normalised importance weights $\tilde{W}_{0}^{(i)} \propto \frac{p\left(\phi_{0}^{(i)}\right)}{q\left(\tilde{\phi}_{0}^{(i)}\right)}$, where $\sum_{i=1}^{N} \tilde{W}_{t}^{(i)}=1$. This provides a sample distribution made up of $N$ values which can be used to estimate the true distribution at time $t=0$.
+
+For the remaining times $t=1,\dots T$:
+
+Take $i=1,2,...,N$ samples in $t$ according to the estimated posterior distribution: $\phi_{t}^{(i)} \sim q_{t}\left(\phi_{t} \mid \tilde{\phi}_{0: t-1}^{(i)}\right)$ and add a new dimension to the particles $\phi_{0: t}^{(i)}= \left(\tilde{\phi}_{0: t-1}^{(i)}, \phi_{t}^{(i)}\right)$. Normalise the weights $W_{t}^{(i)} \propto \frac{p\left(y_{t} \mid \phi_{t}^{(i)}\right) p\left(\phi_{t}^{(i)} \mid \phi_{t-1}^{(i)}\right)}{q_{t}\left(\phi_{t}^{(i)} \mid \phi_{0: t-1}^{(i)}\right)} \tilde{W}_{t-1}^{(i)}$ where $\sum_{i=1}^{N} w_{t}^{(i)}=1$. Then calculate the estimate: $E_{t}^{\mathrm{PFn}}=\sum_{i=1}^{N} f\left(\phi_{0: t}^{(i)}\right) W_{t}^{(i)}.$ 
+
+Resampling:
+
+If $N^{eff } \leq c N$, we resample $\left\{\tilde{\phi}_{0: t}^{(i)}\right\}$ with replacement from $\left\{\phi_{0: t}^{(i)}\right\}$ with the normalized weights $W_{t}^{(i)}$ and  $\tilde{w}_{t}^{(1)}=1 / N$ to achieve a set of equally weighted particles $\left\{\tilde{\phi}_{t}^{(i)}, \tilde{W}^{(i)}=1 / N\right\} ;$ else set $\left\{\tilde{\phi}_{0: t}^{(i)}, \tilde{W}_{t}^{(i)}\right\}=\left\{\phi_{0: t}^{(i)}, W_{t}^{(i)}\right\}$. 
+
+Resampling is associated with additional variance in estimates, which is introduced to prevent the samples from sticking to certain values like previously is the SIS algorithm. Resampling is done whenever the effective sample size $N^{eff}$ falls below or is equal to a chosen proportion $c$ of the number of particles used $N$. If $c=1$, then we establish resampling at each time point. However, when we don't have much problem with degeneracy of importance weights, we might set $c=0.5$. The idea is to only resample when there is enough weight degeneracy, as otherwise additional variance in estimates from constant resampling is unnecessarily introduced. 
+
+We get two particle approximations at each time point: $\left\{\phi_{0: t}^{(i)}, W_{t}^{(i)}\right\}$ before resampling and $\left\{\tilde{\phi}_{0: t}^{(i)}, \tilde{W}_{t}^{(i)}\right\}$ after resampling; both of them are unbiased, but as stated previously, the estimator before resampling has generally lower variance. In this general particle filter we obtain a weighted sample of state sequences $\phi_{0: t}^{(i)}=\left(\phi_{0}^{(i)}, \phi_{1}^{(i)}, \ldots, \phi_{t}^{(i)}\right)$ that approximate a posterior over state sequences $p\left(\phi_{0: t} \mid y_{1: t}\right)$. Combining our calculations we get the estimator $E_{t}^{\mathrm{PFn}}$ over these sequences: $E^{\mathrm{PFn}}=\sum_{i=1}^{n} W_{t}^{(i)} f\left(\phi_{t}^{(i)}\right)$.
+
+In the literature, we may find several variations of generic particle filter algorithm, e.g. the bootstrap filter and the auxilliary particle filter. Furthermore, it was proved that generally, Sequential Monte Carlo algorithms (and the generic particle filter as one of them) satisfy Central Limit Theorem in a sense that as the number of particles grow to infinity, Sequential Monte Carlo estimates are normally distributed with mean around the true value.
 
 
 ### Example (section 4.4)
 
-In the following example, we will show Sequential Importance Sampling with an example of a latent Gaussian process (observation probability distribution is the normal distribution) with added noise. We define that a hidden variable $\phi$ in discrete time as $\phi_{t+1} = \phi_t + \xi_t$, where $\xi_t \sim N(0, \sigma_{\xi}^{2})$. The initial distribution at $t=0$ of the random walk is stated as $\phi_0 \sim N(\mu_0, \sigma_0^2)$. Moreover, values of observations at time $t=0$ - $Y_t$ depends on the observation probability distribution $\phi_t$ with added noise $\epsilon_t$ such that: $Y_t=\phi_t+\epsilon_t$, $\epsilon_t \sim N(0, \sigma_{\epsilon}^{2} )$. Having this assumptions, we may deduce that the the conditional probability of the observation $Y_t$ given the observation probability distributions $\phi_t$ is normally distributed with mean $\phi_t$ and variance $\sigma_{\epsilon}^{2}$: $p(y_t|\phi_t) = N(\phi_t, \sigma_{\epsilon}^{2})$. Similarly, $p(\phi_t|\phi_{t-1})=N(\phi_{t-1}, \sigma_{\xi}^{2} )$. We assume that observations $y_t$ are made sequentially and after each observation we want to infer corresponding hidden variable $\phi_t$. The distributions that we are interested in are $p(\phi_1|y_1), p(\phi_2|y_{1:2}),...,p(\phi_t|y_{1:t})$. We may compute them analytically using Kalman filter (we are dealing with linear and Gaussian proces), but to demonstrate an approximation of the posterior means
-we will use the aforementioned bootstrap filter - one of the versions of a generic particle filter. It is characterized by the fact that the state transition distribution $p(\phi_t|\phi_{t-1})$ is used as a conditional importance distribution $q_t(\phi_t|\phi_{0:t-1})$ - it simplifies the reweighting step and weights are calculated as $W_{t}\propto p\left(y_{t} \mid \phi_{t}^{(i)}\right) \tilde{W}_{t-1}^{(i)}$. In the code below we illustrate this example with $\mu_0=10,\sigma_0^{2}=2, \sigma_{\xi}^{2}=1,\sigma_{\epsilon}^{2}=10$ and number of discrete time points equal to 50. We set $c=1$ - we resample at each repetition using SI. As we can see, we have observations (blue dots), true hidden states calculated with Kalman filter (red dots) and our estimates of the posterior mean in purple.
+In the following example, we will show Sequential Importance Sampling with an example of a latent Gaussian process with added noise. We define a hidden variable $\phi$ in discrete time as $\phi_{t+1} = \phi_t + \xi_t$, where $\xi_t \sim N(0, \sigma_{\xi}^{2})$. The initial distribution at $t=0$ of the random walk is $\phi_0 \sim N(\mu_0, \sigma_0^2)$. Values of observations $Y_t$ depend on $\phi_t$ with added noise $\epsilon_t$ such that: $Y_t=\phi_t+\epsilon_t$, $\epsilon_t \sim N(0, \sigma_{\epsilon}^{2} )$. Intuitively there are two sources of randomness: firstly where the state will go next and secondly where the state is at the current time. 
+
+Using the model specification, we may deduce that the the conditional probability of the observation $Y_t$ given the observation probability distributions $\phi_t$ is normally distributed with mean $\phi_t$ and variance $\sigma_{\epsilon}^{2}$: $p(y_t|\phi_t) = N(\phi_t, \sigma_{\epsilon}^{2})$. Similarly, $p(\phi_t|\phi_{t-1})=N(\phi_{t-1}, \sigma_{\xi}^{2} )$. We assume that observations $y_t$ are made sequentially and after each observation we want to infer corresponding hidden variable $\phi_t$. The distributions that we are interested in are $p(\phi_1|y_1), p(\phi_2|y_{1:2}),...,p(\phi_t|y_{1:t})$.
+
+To demonstrate an approximation of the posterior means we will use the aforementioned bootstrap filter - one of the variations of a generic particle filter. It is characterized by the fact that the state transition distribution $p(\phi_t|\phi_{t-1})$ is used as a conditional importance distribution $q_t(\phi_t|\phi_{0:t-1})$ - it simplifies the reweighting step and weights are calculated as $W_{t}\propto p\left(y_{t} \mid \phi_{t}^{(i)}\right) \tilde{W}_{t-1}^{(i)}$. In the code below we illustrate this example with $\mu_0=10,\sigma_0^{2}=2, \sigma_{\xi}^{2}=1,\sigma_{\epsilon}^{2}=10$ and number of discrete time points equal to 50. We set $c=1$ - we resample at each repetition using SIS. The results are shown graphically, where we have observations (blue dots), true hidden states (red dots) and our estimates of the posterior mean in purple.
+
+Firstly, a function for systematic resampling is made. Unlike the previous functions made, rather than generate the sample itself, this function takes the importance weights of a sample, and then based on the systematic resampling algorithm (given previously) outputs the indices which correspond with the particles to be used. The function is structured as follows: the length of the weights is found and the weights normalised. The cumulative sum of the weights is also found and the vector storing the indicies is initialised. Then $u$ and $U$ from the systematic resampling algorithm are generated. Then a for loop is ran. The for loop iterates over $j$. Each time, if the cumulative sum at $j$ is less than $U$ at $i$, then it keeps increasing $j$ until the cumulative sum is greater. If it is greater, then it takes that particle when resampling (by taking the corresponding index). If the cumulative sum is smaller than $U$ for a new $i$, then it will skip over that observation by moving to the next $j$ as the weight is too small. Similarly, if $U$ for the next $i$ is not larger than the cumulative sum at $j$, the algorithm will repeat certain states which have more weight, by retaining the value of $j$ for the new $i$. The indices determining which particles to use are then output.
 ```{r}
-# Bootstrap Filter
-
-# Number of discrete time points that 
-n <- 50
-
-# Simulate the true latent process theta
-
-# Sample for in initial distribution
-intstate <- rnorm(1, 10, sqrt(2))
-
-# Sample the movement of the state
-transstates <- rnorm(n-1, 0, 1)
-
-# Initialise the true distribution
-theta <- rep(0, n)
-
-# The first value of theta is a sample from the initial distribution
-theta[1] <- intstate
-
-# The remaining values of theta are sums of the initial state and the individual transitions
-for (i in 2:n) {
-  theta[i] <- intstate + cumsum(transstates[1:(i-1)])[i-1]
-}
-
-# Add noise to get the observed values of the latent states
-y <- theta + rnorm(n, 0, sqrt(10))
-
-# number of particles to use at each distribution
-npar <- 500
-
 # The systematic resampling algorithm
 reSys <- function(w) {
-  # input: w is a vector of length N with (unnormalized) importance weights
-  # output: a vector of length N with indices of the replicated particles
-  # Find the length of the weights
   N <- length(w)
-  # normalise the weights
   w <- w/sum(w)
-  # Find the cumulative sum of the weights
   cusum <- cumsum(w)
-  # Get the uniform sample
+  index <- rep(0,N)
+  
   u <- runif(1, max=1/N)
-  # Generate U
   FixedU <- seq(1/N, (N-1)/N, length=N-1)
   U <- c(0, FixedU) + u
-  # Initialise the vector of indices
-  index <- rep(0,N)
+  
   j <- 1
-  # The for loop iterates over j. Each time, if the cumulative sum at j is less than U 
-  # at i, then keep increasing j until the cumulative sum is greater. If it is greater,
-  # then take that particle when resampling (by taking the index). If the cumulative
-  # sum is smaller for a new i, then it will skip over that observation as the weight
-  # is too small.
   for(i in 1:N) {
     while (U[i] > cusum[j]) {
       j <- j + 1
@@ -350,36 +324,42 @@ reSys <- function(w) {
   }
   return(index)
 }
+```
 
-# Bootstrap filter
+The states will be inferred using a bootstrap filter. The code chunk is structured as follows: first the number of time points to use are chosen. The true latent process `theta` is generated by generating the initial state and the state transitions, and cumulative summing the state transitions and the initial state. Noise is added to get the observed values. The number `n` which determines how many samples will be used at each time point is chosen. Then matrices for the particles and their corresponding weights are initialised. A sample is taken from the initial state, which are all equally weighted. Then a for loop iterates over each time point, generating samples and calculating weights. The calculated unnormalised weights are not multiplied by weights $\tilde{W}_{t-1}^{(i)}$, like in the generic particle filter algorithm, because the previous samples had been given equal weighting by the end of the previous for loop iteration. Weights are then normalised, and the particles are systematically resampled. A plot of the output is then made.
+```{r}
+# Bootstrap Filter
+Tp <- 50
 
-# initialise matrix for the particles Each row represents a new time point
-# and each column is the number of samples used at each to estimate the true state at
-# each time point
-P <- matrix(NA, n+1, npar)
+intstate <- rnorm(1, 10, sqrt(2))
+transstates <- rnorm(Tp-1, 0, 1)
 
-# initialise matrix for the weights
-W <- matrix(NA, n+1, npar)
+theta <- rep(0, Tp)
+theta[1] <- intstate
+for (i in 2:Tp) {
+  theta[i] <- intstate + cumsum(transstates[1:(i-1)])[i-1]
+}
 
-# Sample particles from the prior distribution for the initial state.
-P[1,] <- rnorm(npar, 10, sqrt(2))
-# The particles from the initial distribution are all equally weighted.
+y <- theta + rnorm(Tp, 0, sqrt(10))
 
-# Iterate over each distribution at each time point
-for(t in 1:n) {
-  # sample particles according to the transition distribution
-  P[t+1,] <- rnorm(npar, P[t,], 1)
-  # compute the weights for the new distribution according the the previous observed values.
-  # The particles at each previous time point have been given uniform weighting, thus
-  # there is no need to multiply by hat{W}_{t-1}^{(i)}
+n <- 500
+
+P <- matrix(NA, Tp+1, n)
+W <- matrix(NA, Tp+1, n)
+
+P[1,] <- rnorm(n, 10, sqrt(2))
+for(t in 1:Tp) {
+  P[t+1,] <- rnorm(n, P[t,], 1)
   W[t+1,] <- dnorm(y[t], P[t+1,], sqrt(10))
-  # Normalise the weights, for each new distribution.
   W[t+1,] <- W[t+1,]/sum(W[t+1,])
-  # Particles to be used from systematic resampling.
   P[t+1,] <- P[t+1, reSys(W[t+1,])]
 }
-plot(1:n, y, col = "blue", pch = 20, xlab = "Time Points", ylab = "", main = "Gaussian Latent Process")
+
+# Plot the final results
+plot(1:Tp, y, col = "blue", pch = 20, xlab = "Time Points", ylab = "",
+     main = "Gaussian Latent Process")
 points(theta, col="red", pch = 20)
-lines(0:n, rowSums(P*W), col = "purple")
-legend("bottomleft", c("True State", "Observed State", "Particle Filter Estimate"), col = c("red", "blue", "purple"), lty = c(20,20,1))
+lines(0:Tp, rowSums(P*W), col = "purple")
+legend("bottomleft", c("True State", "Observed State", "Particle Filter Estimate"),
+       col = c("red", "blue", "purple"), lty = c(20,20,1))
 ```
