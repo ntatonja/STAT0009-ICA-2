@@ -3,7 +3,6 @@ title: "STAT0009 ICA 2 - Sequential Monte Carlo"
 author: "21169367, 18003531"
 date: "11/02/2022"
 output:
-  pdf_document: default
   html_document: default
 ---
 
@@ -14,11 +13,11 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE,echo = TRUE)
 ## Introduction
 
 This is a report for the published study ‘A tutorial on particle filters’, by Maarten Speekenbrink. It was published in 2016 in the Journal of Mathematical Psychology, and is
-accessible here: https://www.sciencedirect.com/science/article/pii/S002224961630030X. Throughout this report we focus on giving a basic understanding to the underlying theory and reproducing some of the illustrated examples through simulation. We only consider chapters 1 through to 4, as chapters beyond this focus more on specific applications and extensions to the methods shown.
+accessible here: https://www.sciencedirect.com/science/article/pii/S002224961630030X. Throughout this report we focus on giving a basic understanding to the underlying theory and reproducing some of the illustrated examples through simulation. We only consider chapters 1 through to 4, as chapters beyond this focus more on specific applications and extensions to the methods shown. The main topics covered are Importance Sampling, Sequential Sampling, Resampling and Sequential Monte Carlo applied to State-Space Models.
 
 ## Basic Monte Carlo Integration
 
-One of the most common problems in many areas of Statistics is the problem of intractable integrals and the "curse of dimensionality", i.e. that problems become exponentially harder and more computationally intensive when extended to two or more dimensions. The Monte Carlo method helps tackling these issues, and is based on the following principle: if an integral can be written as an expectation with respect to some probability distribution, then we can approximate it by drawing samples from the distribution and computing the sample mean (STAT0017 lecture notes). This method works because of two well known theorems from probability theory, the Law of Large Numbers and the Central Limit Theorem. 
+One of the most common problems in many areas of Statistics is the problem of intractable integrals and the "curse of dimensionality", i.e. that problems become exponentially harder and more computationally intensive when extended to two or more dimensions. The Monte Carlo method helps tackling these issues, and is based on the following principle: if an integral can be written as an expectation with respect to some probability distribution, then we can approximate it by drawing samples from the distribution and computing the sample mean. This method works because of two well known theorems from probability theory, the Law of Large Numbers and the Central Limit Theorem. 
 
 To calculate an expected value $E_p[f(Y)]$, where $Y$ is a random variable with known distribution $p(y)$, and $f(Y)$ is a given function of $Y$, using the Basic Monte Carlo integration, the following algorithm is used. First, for $i = 1,\dots, N$, sample $y^{(i)} \sim p(y)$, where $y^{(i)}$ denotes the $i^{th}$ sampled value. Then, compute the sample mean to obtain the Monte Carlo estimate $E^{MC}$ of the expected value:$E^{MC}= \frac{1}{N} \sum^{N}_{i=1}f(y^{(i)}).$
 
@@ -28,15 +27,16 @@ Basic Monte Carlo. The following code chunk is structured as follows: first, a n
 ```{r}
 # Sampling - Basic Monte Carlo
 
-library(gamlss.dist)
+suppressWarnings(library(gamlss.dist))
 set.seed(123)
 
 basic <- rexGAUS(2000, 0.4, 0.1, 0.5)
 mean(basic>3)
 
-true <- 1-pexGAUS(3, 0.4, 0.1, 0.5) #true value
-1-mean(basic>3)/true #calculating the percentage of how much lower the "basic"
-                     #estimate is compared to the true value
+# The true value and calculating the percentage of how much lower
+# the "basic" estimate is compared to the true value
+true <- 1-pexGAUS(3, 0.4, 0.1, 0.5)
+1-mean(basic>3)/true
 
 ```
 ## Importance sampling
@@ -55,7 +55,7 @@ Still using the same example, we now try using importance sampling to estimate t
 Importance Sampling. The following code chunk is structured as follows: first, a necessary library is loaded in to evaluate the truncated normal distribution. For the the truncated normal distribution and the shifted exponential distribution, functions are written to generate the importance samples, taking the number of samples wanted as an argument. Importance samples are generated and their weights are calculated, for both distributions. Since probabilities are of interest here, the corresponding function $f$ when calculating the importance sample estimate is just the indicator function, thus only an average of the weights for which the corresponding sample values go above 3 are taken. In the case of the shifted exponential distribution, all sample values are above 3, thus only the average of the weights is calculated.
 ```{r}
 # Load in a necassary library
-library(truncnorm)
+suppressWarnings(library(truncnorm))
 
 # Importance Sampling - Truncated Normal
 ISnorm <- function(n){
@@ -146,11 +146,11 @@ where the incremental weight update is defined as $$a^{(i)}_t= \frac {p(\theta^{
 
 While this still requires lengthy computations, it can be simplified in certain cases. Assuming that observations are conditionally independent and that the importance distribution is time invariant (i.e. $q_t(\theta) = q_{t-1}(\theta) = q(\theta)$), and using self-normalised importance weights, we can simplify the incremental weight update as $a^{(i)}_t=p(y_t|\theta^{(i)}).$
 
-Then, the algorithm for Sequential Importance Sampling with time invariant parameters is as follows. First, for $i = 1, \dots, N$, sample $\theta^{(i)} \sim q(\theta )$, then compute the normalised weights $W^{(i)}_0 \propto \frac{p(\theta)}{q(\theta )}$ with $\sum^N_{j=1} W^{(i)}_0 = 1.$ Then, for $t = 1, \dots, t$, reweight the normalised weights for $i = 1, \dots, N$, by computing $W^{(i)}_t \propto p(y_t|\theta^{(i)})W^{(i)}_{t−1}$,with $\sum^N_{i=1} W^{(i)}_t = 1.$ Finally, for $t = 1, \dots, t$ compute the (self-normalised) SIS estimate $E^{SISn}_{t} =\sum ^N_{i=1}W^{(i)}_t f(\theta^{(i)})$.
+Then, the algorithm for Sequential Importance Sampling with time invariant parameters is as follows. First, for $i = 1, \dots, N$, sample $\theta^{(i)} \sim q(\theta )$, then compute the normalised weights $W^{(i)}_0 \propto \frac{p(\theta)}{q(\theta )}$ with $\sum^N_{j=1} W^{(i)}_0 = 1.$ Then, for $t = 1, \dots, t$, reweight the normalised weights for $i = 1, \dots, N$, by computing $W^{(i)}_t \propto p(y_t|\theta^{(i)}) W^{(i)}_{t-1}$, with $\sum^N_{i=1} W^{(i)}_t = 1.$ Finally, for $t = 1, \dots, t$ compute the (self-normalised) SIS estimate $E^{SISn}_{t} =\sum ^N_{i=1}W^{(i)}_t f(\theta^{(i)})$.
 
 We will demonstrate how this algorithm works in the following example, whereby we want to sequentially infer the posterior mean and variance of a Gaussian random variable. We assume that the observations are independent and that they come from a Normal distribution with an unknown mean $\mu$ and variance $\sigma^2$. Hence, the unknown parameter $\theta$ is a vector $\theta=(\mu,\sigma)$. Our prior distributions for $\mu$ and $\sigma$ - which we will also use as the importance distributions - are a Gaussian distribution with mean 0 and standard deviation 10, and a uniform distribution between 0 and 50, for $\mu$ and $\sigma$ respectively. Then, we apply the algorithm to 100 observations from a Normal(5,5) distribution, using a sample of size N = 200. The following code shows a simulation of this example.
 
-Sequential Importance Sampling. The following code chunk is structured as follows: a function is created which takes as inputs the number of samples to use from the prior and the number of time steps in the sequence. Since the prior distributions for $\mu$ and $\sigma$ will also act as instrumental distributions, the initial weights are uniform. The samples from the prior are generated. This is followed by the observations and their corresponding weights being generated at each time point. The weights are normalised, and the posterior expected values for $\mu$ and $\sigma$ are outputted, for each time point. The results from the algorithm being applied are then plotted.
+Sequential Importance Sampling. The following code chunk is structured as follows: a function is created which takes as inputs the number of samples to use from the prior and the number of time steps in the sequence. Since the prior distributions for $\mu$ and $\sigma$ will also act as importance distributions, the initial weights are uniform. The samples from the prior are generated. This is followed by the observations and their corresponding weights being generated at each time point. The weights are normalised, and the posterior expected values for $\mu$ and $\sigma$ are outputted, for each time point. The results from the algorithm being applied are then plotted.
 ```{r}
 # Sequential Importance Sampling
 SIS <- function(n, times){
@@ -176,11 +176,11 @@ seqposts <- SIS(200,100)
 # Plot the results
 plot(seqposts$postmu, main=expression(mu), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
-legend(65,2,legend="true value (5)",lty=2,col="red")
+legend(65,2,legend="True Value (5)",lty=2,col="red")
 
 plot(seqposts$postsig, main=expression(sigma), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
-legend(65,20,legend="true value (5)",lty=2,col="red")
+legend(65,20,legend="True Value (5)",lty=2,col="red")
 
 ```
 
@@ -188,8 +188,7 @@ By looking at the plots above, it is clear that as $t$ increases, the estimated 
 
 ## Resampling
 
-To overcome the issue of weight degeneracy, an extra step of resampling is introduced in the Sequential Monte Carlo algorithms. Resampling allows for particles to be sampled with replacement from the set of all particles, with a probability that
-depends on the importance weights. The key idea is to reproduce particles with large weights and discard those with small weights, as they have little to no effect on the estimates anyway. An additional benefit of resampling is that while the Sequential Importance sampling (SIS) samples were not distributed according to the target distribution $p$ but followed the instrumental distribution $q$, the resampled values are (approximately) distributed according to $p$. 
+To overcome the issue of weight degeneracy, an extra step of resampling is introduced in the Sequential Monte Carlo algorithms. Resampling allows for particles to be sampled with replacement from the set of all particles, with a probability that depends on the importance weights. The key idea is to reproduce particles with large weights and discard those with small weights, as they have little to no effect on the estimates anyway. An additional benefit of resampling is that while the Sequential Importance sampling (SIS) samples were not distributed according to the target distribution $p$ but followed the instrumental distribution $q$, the resampled values are (approximately) distributed according to $p$. 
 
 There are various sampling schemes, such as multinomial resampling, residual resampling, stratified resampling, and systematic resampling. The simplest one is multinomial sampling, which draws $N$ samples from a multinomial distribution for all $i = 1, \dots, N$, with probabilities $p(i) =W^{(i)}$ . After resampling, the weights are set to $W^{(i)} = 1/N$. A drawback of multinomial sampling is that it increases the variance of the estimator. Alternative sampling schemes have been introduced with smaller variances.
 
@@ -197,7 +196,7 @@ Residual resampling is a method that uses a mix of deterministic and random resa
 
 Stratified resampling also uses a partially deterministic replication of particles. This method is based on the principles of stratified sampling often used in survey research. It uses the weights to form an "empirical" cumulative distribution over the sampled values, and then this distribution is split into $N$ equally sized strata, and a single draw is taken from each stratum. 
 
-Finally, the most popular resampling scheme, systematic resampling is based on the same idea as stratified resampling, however, it reduces the Monte Carlo variance further by using a single random number instead of different ones, to sample from each stratum. To understand this algorithm, first we define $\{\theta_t, W^{(i)}_t\}$ as the set of particles before resampling and $\{\tilde{\theta}_t, \tilde{W}^{(i)}_t\}$ as the set of particles after resampling. Then, the algorithm is as follows: first, draw $u$, a single random number from a uniform distribution between 0 and $1/N$. Then, define a random variable $U^i = (i − 1)/N + u$, for all $i = 1, \dots, N$. Next, find $r$ that satisfies $\sum^{r−1}_{k=1} W^{(k)} \leq U^i < \sum^{r}_{k=1} W^{(k)_t}$ and set $j(i)=r$, for all $i = 1, \dots, N$. Finally, for all $i$, set $\tilde{\theta}^{(i)}_t= \theta^{(j(i))}_t$ and $\tilde{W}^{(i)}_t = 1/N$. While systematic resampling is simple to implement and usualy performs well, contrary to residual and stratified resampling, it is not guaranteed to outperform multinomial resampling.
+Finally, the most popular resampling scheme, systematic resampling, is based on the same idea as stratified sampling, however, it reduces the Monte Carlo variance further by using a single random number instead of different ones (like in stratified resampling), to sample from each stratum. To understand this algorithm, first we define $\{\theta_t, W^{(i)}_t\}$ as the set of particles before resampling and $\{\tilde{\theta}_t, \tilde{W}^{(i)}_t\}$ as the set of particles after resampling. Then, the algorithm is as follows: first, draw $u$, a single random number from a uniform distribution between $0$ and $\frac{1}{N}$. Then, define a random variable $U^i = \frac{i-1}{N}+u$ for all $i=1,\dots, N$. Next, find $r$ that satisfies $\sum^{r-1}_{k=1} W^{(k)} \leq U^i < \sum^{r}_{k=1} W^{(k)_t}$ and set $j(i)=r$, for all $i=1,\dots, N$. Finally, for all $i$, set $\tilde{\theta}^{(i)}_t = \theta^{(j(i))}_t$ and $\tilde{W}^{(i)}_t = \frac{1}{N}$. While systematic sampling is easy to implement and usually performs well, contrary to residual and stratified resampling, it is not guaranteed to outperform multinomial sampling. Systematic sampling will be used in a later section, with more explanation of the process.
 
 The below code shows a simulation for multinomial resampling, using the same example as before for SIS. By comparing the plots from SIS and multinomial resampling, it is clear that the latter performs better than the algorithm without resampling.
 
@@ -230,21 +229,23 @@ ReSIS <- function(n,times){
 seqposts <- ReSIS(20000,100)
 
 # Plot the results
-plot(seqposts$postmu, main=expression(mu), xlab="Time point (t)", ylab="Value", ylim=c(range(seqposts$postmu)[1], 5.2))
+plot(seqposts$postmu, main=expression(mu), xlab="Time point (t)", ylab="Value", ylim=c(range(seqposts$postmu)[1], 5.4))
 abline(h=5,col="red",lty=2)
-legend(65,2,legend="true value (5)",lty=2,col="red")
+legend(65,2,legend="True Value (5)",lty=2,col="red")
 
 plot(seqposts$postsig, main=expression(sigma), xlab="Time point (t)", ylab="Value")
 abline(h=5,col="red",lty=2)
-legend(65,20,legend="true value (5)",lty=2,col="red")
+legend(65,20,legend="True Value (5)",lty=2,col="red")
 
 ```
 
 Here resampling has allowed the posterior to stay close to the true values much better for both $\mu$ and $\sigma$, than for SIS without resampling. The points may be a little bit more variable, but the problem of weight degeneracy has been overcome.
 
-## Particle Filters: SMC for state-space models
+## Particle Filters: SMC for State-Space Models
 
-When it comes to the filtering problems, the aim is to detect the true state of a process $\phi_{t}$ at time $t$. However, this state is not observed (latent). Instead some observation $y_{t}$ is seen, which is a distortion of the true state. In other words, there is an additional error term such that $\phi_{t} = y_{t} + \epsilon_t$. We can tackle problems of inferring the true state by using Bayesian methods: as each new observation comes in, a posterior distribution is calculated, using the available data from all of the previous time points - $p\left(\phi_{1} \mid y_{1}\right), \ldots, p\left(\phi_{t} \mid y_{1: t}\right)$.
+When it comes to the filtering problems, the aim is to detect the true state of a process $\phi_{t}$ at time $t$. However, this state is not observed (latent). Instead some observation $y_{t}$ is seen, which is a distortion of the true state. In other words, there is an additional error term such that $\phi_{t} = y_{t} + \epsilon_t$. We can tackle problems of inferring the true state by using Bayesian methods: as each new observation comes in, a posterior distribution is calculated, using the available data from all of the previous time points - $p\left(\phi_{1} \mid y_{1}\right), \ldots, p\left(\phi_{t} \mid y_{1: t}\right)$. 
+
+As a motivating example, a nuclear reactor may be imagined. In this case of interest may be whether the reactor will fail or not. Measurements regarding the reactor may be taken, but with some sort of distortion may occur, and the measurements may not be fully accurate. As each measurement comes in, the probability of the reactor failing may be calculated, and some action may be taken if this probability exceeds a certain threshold.
 
 To describe time-series of observations state-space models are used. They consist of observations $y_{1: t}$ that are realisations of the hidden states $\phi_{0: t}$. In these type of models, we have two significant simplifying assumptions:
 
@@ -276,9 +277,12 @@ p\left(y_{t} \mid y_{1: t-1}\right)=\iint p\left(y_{t} \mid \phi_{t}\right) p\le
 $$ 
 is a normalising constant. Calculating posteriors recursively is a central concept to the next few sections.
 
-As before, our goal is to estimate some unknown parameter $\theta$, which in the case of state-space models, is a vector of the hidden states $\phi_{0:t}$. Sequential Importance Sampling (SIS) is used, which incrementally builds up the importance sample, starting  with the sample ${\phi^{(i)}_0}$ at t=0, then sampling values $\phi^{(i)}_i$ at times $i=1,..t$ conditional on the previous sample. Then, the importance distribution at time t is defined as $q_t(\phi_{0:t}) = q_t(\phi_t|\phi_{0:t−1})q_{t−1}(\phi_{0:t−1})$. Given that $q_{t−1}(\phi_{0:t}) = q_{t−1}(\phi_{0:t−1})$, and combining this with the importance distribution, the incremental weight update, $a^{(i)}_t$, can be written as $a^{(i)}_t=\frac {p(y_t|\phi^{(i)}_t)p(\phi^{(i)}_t|\phi^{(i)}_{t−1})}{p(y_t|y_{1:t−1})q_t(\phi^{(i)}_t|\phi^{(i)}_{0:t−1})}$. This can be further simplified when using normalised importance weights, as the $p(y_t|y_{1:t−1})$ term can be ignored. As previously with SIS, this algorithm now has approximately constant computational costs, because the weight update works in such a way that there is no need to revisit all the previous observations and hidden states, only the most recent one is conditioned  on. The choice of the importance distribution $q_t(\phi_t|\phi_{0_t-1})$ is still important for minimising the variance of the importance weights. However, even with the "optimal" importance distribution, SIS for state-space models can suffer from the same problem as the basic SIS algorithm - weight degeneracy.
+As before, our goal is to estimate some unknown parameter $\theta$, which in the case of state-space models, is a vector of the hidden states $\phi_{0:t}$. Sequential Importance Sampling (SIS) is used, which incrementally builds up the importance sample, starting  with the sample ${\phi^{(i)}_0}$ at t=0, then sampling values $\phi^{(i)}_i$ at times $i=1,..t$ conditional on the previous sample. Then, the importance distribution at time t is defined as
+$q_t(\phi_{0:t}) = q_{t}(\phi_t|\phi_{0:t-1})q_{t-1}(\phi_{0:t-1})$. Given that
+$q_{t-1}(\phi_{0:t}) = q_{t-1}(\phi_{0:t-1})$, and combining this with the importance distribution, the incremental weight update, $a^{(i)}_t$, can be written as
+$a^{(i)}_t=\frac {p(y_t|\phi^{(i)}_t)p(\phi^{(i)}_t|\phi^{(i)}_{t-1})}{p(y_t|y_{1:t-1})q_t(\phi^{(i)}_t|\phi^{(i)}_{0:t-1})}$. This can be further simplified when using normalised importance weights, as the $p(y_t|y_{1:t-1})$ term can be ignored. As previously with SIS, this algorithm now has approximately constant computational costs, because the weight update works in such a way that there is no need to revisit all the previous observations and hidden states, only the most recent one is conditioned  on. The choice of the importance distribution $q_t(\phi_t|\phi_{0_t-1})$ is still important for minimising the variance of the importance weights. However, even with the "optimal" importance distribution, SIS for state-space models can suffer from the same problem as the basic SIS algorithm - weight degeneracy.
 
-We can use Sequential Monte Carlo methods and Sequential Importance sampling with resampling to resolve the problem of weight degeneracy. Thanks to resampling, the particles with low weights are removed and those with high weights are replicated - we achieve the set of uniformly weighted particles that are approximately distributed according to the posterior $p(\phi_{0:t}|y_{1:t})$. Sequentially, at the new time points, the new hidden states are added from a conditional importance distribution -  $q_{t+1}(\phi_{t+1}^{(i)}| \phi_{0:t}^{(i)})$. A generic particle filter algorithm is as follows: 
+We can use Sequential Monte Carlo methods and Sequential Importance sampling with resampling to resolve the problem of weight degeneracy. Thanks to resampling, the particles with low weights are removed and those with high weights are replicated - we achieve the set of uniformly weighted particles that are approximately distributed according to the posterior $p(\phi_{0:t}|y_{1:t})$. Sequentially, at the new time points, the new hidden states are added from a conditional importance distribution - $q_{t+1}(\phi_{t+1}^{(i)}| \phi_{0:t}^{(i)})$. A generic particle filter algorithm is as follows: 
 
 Initialise:
 
@@ -358,7 +362,7 @@ for(t in 1:Tp) {
 }
 
 # Plot the final results
-plot(1:Tp, y, col = "blue", pch = 20, xlab = "Time Points", ylab = "Values",
+plot(1:Tp, y, col = "blue", pch = 20, xlab = "Time Point (t)", ylab = "Values",
      main = "Gaussian Latent Process")
 points(theta, col="red", pch = 20)
 lines(0:Tp, rowSums(P*W), col = "purple")
@@ -366,4 +370,8 @@ legend("topleft", c("True State", "Observed State", "Particle Filter Estimate"),
        col = c("red", "blue", "purple"), lty = c(20,20,1))
 ```
 
-The bootstrap filter does well at sequentially estimating the new latent states at each time point, despite the relativly high variability shown by the observed states.
+The bootstrap filter does well at sequentially estimating the new latent states at each time point, despite the relatively high variability shown by the observed states.
+
+## Conclusion
+
+In this report we have managed to introduce the methods supplied by the paper, showing working algorithms for Importance Sampling, Sequential Importance Sampling, State-Space Models, also showing how Resampling may be applied to increase the accuracy of estimates in a Bayesian setting. However, when illustrating algorithms through simulation, we mainly stuck to the examples given in the paper already. Exploring different examples may improve understanding, and also highlight different situations in which different methods may be more appropriate. Furthermore, we did not apply any of these methods shown to real data, and doing so could help guide an understanding of where such methods could be applied. Further work based on this paper may entail finding the limitations of each algorithm, and also applying each one to different real world scenarios.
