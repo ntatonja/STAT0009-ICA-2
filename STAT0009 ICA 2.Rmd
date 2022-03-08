@@ -367,7 +367,7 @@ plot(1:Tp, y, col = "blue", pch = 20, xlab = "Time Point (t)", ylab = "Values",
 points(theta, col="red", pch = 20)
 lines(0:Tp, rowSums(P*W), col = "purple")
 legend("topleft", c("True State", "Observed State", "Particle Filter Estimate"),
-       col = c("red", "blue", "purple"), lty = c(20,20,1))
+       col = c("red", "blue", "purple"),lty = c(NA,NA,1),pch=c(16,16,NA), cex=0.8)
 ```
 
 The bootstrap filter does well at sequentially estimating the new latent states at each time point, despite the relatively high variability shown by the observed states.
